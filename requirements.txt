@@ -5,6 +5,6 @@
  langchain-anthropic
  python-dotenv
  pydantic
-
+ ddgs
 
  
