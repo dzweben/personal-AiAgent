@@ -72,7 +72,7 @@ See `requirements.txt`:
 - ddgs
 
 ## 📝 Notes
-- This is just a **sandbox project** to play with AI agent design.
+- This is just a **sandbox project** to play with AI agent design. I guess this is what I do when I get bored?
 - Virtual environments are intentionally ignored (`venv/` in `.gitignore`).
 - Output file appends new research queries with timestamps.
 
