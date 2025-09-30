@@ -2,7 +2,7 @@
 
 This is a **personal project** I built for fun to explore how to create a simple AI-powered research assistant in Python. The project integrates **LangChain**, **OpenAI**, **Anthropic**, and community tools (DuckDuckGo & Wikipedia) to run queries, parse structured outputs, and even save results to a text file.
 
-##  Features
+##  Features that I used to build a lil' LLM, cause why not!
 - Uses **LangChain** with:
   - `langchain-openai` → access to OpenAI’s GPT models.
   - `langchain-anthropic` → access to Anthropic’s models.
