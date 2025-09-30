@@ -31,14 +31,17 @@ AiAgent/
    cd AiAgent
 
 2. **Set up virtual environment**
+
+   - I mean...you don't have to do this all from a virtual enviornment but I decided to for funsies.
+     
    python3 -m venv venv
    source venv/bin/activate   # Mac/Linux
    venv\Scripts\activate      # Windows
 
-3. **Install dependencies**
+4. **Install dependencies**
    pip install -r requirements.txt
 
-4. **Set environment variables**
+5. **Set environment variables**
    Create a `.env` file in the project root:
    OPENAI_API_KEY=your_openai_key
    ANTHROPIC_API_KEY=your_anthropic_key
