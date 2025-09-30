@@ -1,4 +1,4 @@
-# AiAgent
+# AiAgent - a project for fun!
 
 This is a **personal project** I built for fun to explore how to create a simple AI-powered research assistant in Python. The project integrates **LangChain**, **OpenAI**, **Anthropic**, and community tools (DuckDuckGo & Wikipedia) to run queries, parse structured outputs, and even save results to a text file.
 
