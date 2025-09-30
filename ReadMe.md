@@ -47,7 +47,7 @@ Run the agent:
    python3 main.py
 
 Example interaction:
-   What can I help you research? The health benefits of drinking green tea
+   What can I help you research? "The health benefits of drinking green tea" (sorry for a more boring example I was burnt out of this project by the time I got here!)
 
 Output (to console & saved in `research_output.txt`):
 {
