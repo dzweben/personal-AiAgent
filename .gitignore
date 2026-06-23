@@ -1,5 +1,44 @@
+# env + secrets
 .env
+.env.*
+!.env.example
+*.key
+
+# python
 venv/
+.venv/
+env/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+build/
+dist/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# agent runtime stuff
+research_output.txt
+*.sqlite
+*.sqlite3
+*.db
+.agent_cache/
+.chroma/
+chroma_db/
+vectorstore/
+logs/
+*.log
+exports/
+
+# editors / os
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
