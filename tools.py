@@ -1,31 +1,21 @@
-from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchRun
-from langchain_community.utilities import WikipediaAPIWrapper
-from langchain.tools import Tool
-from datetime import datetime
-import json
-from typing import Union
+"""backwards compatible tools module.
 
+the original project imported `search_tool`, `wiki_tool`, and `save_tool` straight from
+this file. all the real tool code now lives in the `agent.tools` package, but i kept this
+shim around so old imports (and muscle memory) keep working exactly like before.
 
-def save_to_txt(data: str, filename: str = "research_output.txt"):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    formatted_text = f"--- Research Output --- \nTimestamp: {timestamp}\n\n{data}\n\n"
+new code should prefer `from agent.tools import build_tools`.
+"""
 
-    with open(filename, "a", encoding="utf-8") as f:
-        f.write(formatted_text)
+from __future__ import annotations
 
-save_tool = Tool(
-    name = "save_text_to_file",
-    func = save_to_txt,
-    description = "Saves structured research data to a text file",
-)
+from agent.tools.files import save_to_txt, make_save
+from agent.tools.web import make_search
+from agent.tools.wiki import make_wiki
 
-search = DuckDuckGoSearchRun()
-search_tool = Tool(
-    name = "search",
-    func = search.run,
-    description = "Search the web for information",
-)
+# the three classic tools, built once so importing this module gives you ready objects
+save_tool = make_save()
+search_tool = make_search()
+wiki_tool = make_wiki()
 
-
-api_wrapper = WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=100)
-wiki_tool = WikipediaQueryRun(api_wrapper=api_wrapper)
+__all__ = ["save_tool", "search_tool", "wiki_tool", "save_to_txt"]

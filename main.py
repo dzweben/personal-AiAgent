@@ -1,52 +1,46 @@
+"""entry point.
+
+this is still the same little script it always was: ask a question, let the agent go do
+research with its tools, print a structured answer. the heavy lifting just moved into the
+`agent` package so the file stays short and readable.
+
+run it the classic way:
+    python3 main.py
+
+or, once you pip install the project, use the nicer cli:
+    aiagent research "the health benefits of green tea" --export markdown
+"""
+
 from dotenv import load_dotenv
-from pydantic import BaseModel
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from  tools import search_tool, wiki_tool, save_tool
+
+from agent import console
+from agent.agent import build_agent
+from agent.config import load_settings
+
+# keep importing the old schema name from here too, some of my notebooks reference it
+from agent.models import ResearchResponse  # noqa: F401
 
 load_dotenv()
-class ResearchResponse(BaseModel):
-    topic: str
-    summary: str
-    sources: list[str]
-    tools_used: list[str]
 
 
-llm = ChatOpenAI(model ="gpt-4o")
-parser = PydanticOutputParser(pydantic_object=ResearchResponse)
-prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", 
-         """
-        "You are a research assistant that will help generate a research paper.
-        Answer the user query and use neccesary tools
-        Warp the output in this format and provide no other text\n{format_instructions}
-        """
-    ),
-    ("placeholder", "{chat_history}"),
-    ("human", "{query}"),
-    ("placeholder", "{agent_scratchpad}"),
-    ]
-).partial(format_instructions=parser.get_format_instructions())
-tools = [search_tool, wiki_tool, save_tool]
-agant = create_tool_calling_agent(
-    llm = llm,
-    prompt = prompt,
-    tools = tools,
-)
+def main():
+    settings = load_settings()
+    console.banner()
+    console.info(
+        f"provider={settings.provider} model={settings.model} "
+        f"temperature={settings.temperature}"
+    )
 
-agent_executor = AgentExecutor(agent= agant, tools=tools, verbose=True)
-query = input("What can I help you research?")
-raw_response = agent_executor.invoke({"query": query})
+    agent = build_agent(settings=settings)
+
+    query = input("What can I help you research? ")
+    result = agent.research(query)
+
+    # print the pretty version, and fall back to the raw output if parsing flopped
+    console.print_response(result)
+    if result.structured is None:
+        print("Raw Response -", result.raw)
 
 
-try:
-    structured_response = parser.parse(raw_response["output"])
-    print(structured_response)
-except Exception as e:
-    print ("Error in parsing the response", e, "Raw Response - ", raw_response)
-    
-    
+if __name__ == "__main__":
+    main()
