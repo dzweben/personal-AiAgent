@@ -191,6 +191,41 @@ def show_config(config: str | None = typer.Option(None)):
 
 
 @app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", help="host to bind"),
+    port: int = typer.Option(8000, help="port to listen on"),
+):
+    """run the http api (needs the server extra: pip install 'personal-aiagent[server]')."""
+    try:
+        from agent.server.api import run
+    except RuntimeError as exc:
+        console.error(str(exc))
+        raise typer.Exit(code=1) from exc
+    console.banner("aiagent api")
+    console.info(f"serving on http://{host}:{port} (docs at /docs)")
+    run(host=host, port=port)
+
+
+@app.command(name="eval")
+def run_eval_cmd(
+    queries: list[str] = typer.Argument(..., help="one or more queries to benchmark"),
+    provider: str | None = typer.Option(None),
+    model: str | None = typer.Option(None),
+):
+    """run a quick benchmark over some queries and print summary metrics."""
+    from agent.agent import build_agent
+    from agent.evaluate import EvalCase, run_eval
+
+    settings = _settings(provider, model, None, False, None)
+    agent = build_agent(settings=settings)
+    report = run_eval(agent, [EvalCase(q) for q in queries])
+    for r in report.results:
+        status = "ok" if r.parsed else "no structured output"
+        console.info(f"- {r.query[:50]} -> {status}, {r.n_sources} sources, {r.seconds}s")
+    console.success(report.summary())
+
+
+@app.command()
 def version():
     """print the version."""
     from agent import __version__
