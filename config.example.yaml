@@ -1,0 +1,48 @@
+# optional yaml config. anything here is overridden by env vars and CLI flags.
+# load order is: defaults -> this file -> .env -> command line flags.
+
+provider: openai           # openai | anthropic | groq | google
+model: gpt-4o
+temperature: 0.2
+max_tokens: 2048
+
+verbose: true
+stream: true
+
+memory:
+  enabled: true
+  path: .agent_memory.sqlite
+  max_history: 20
+
+rag:
+  enabled: false
+  backend: chroma          # chroma | faiss
+  collection: research
+  chunk_size: 1000
+  chunk_overlap: 150
+  top_k: 4
+
+cache:
+  enabled: true
+  path: .agent_cache
+
+logging:
+  level: INFO
+  file: logs/agent.log
+  rich_tracebacks: true
+
+export:
+  default_format: markdown  # markdown | json | html | pdf | txt
+  directory: exports
+
+tools:
+  enabled:
+    - search
+    - wikipedia
+    - arxiv
+    - calculator
+    - python_repl
+    - read_file
+    - save_text_to_file
+    - http_get
+    - datetime

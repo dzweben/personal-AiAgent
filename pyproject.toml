@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "personal-aiagent"
+version = "0.2.0"
+description = "A personal AI research agent I built for fun, now with way too many bells and whistles."
+readme = "ReadMe.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Danny Zweben", email = "danny.zweben99@gmail.com" }]
+keywords = ["ai", "agent", "langchain", "research", "llm", "rag", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "langchain>=0.2",
+    "langchain-community>=0.2",
+    "langchain-openai>=0.1",
+    "langchain-anthropic>=0.1",
+    "langchain-core>=0.2",
+    "wikipedia",
+    "python-dotenv",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "ddgs",
+    "rich>=13",
+    "typer>=0.12",
+    "pyyaml",
+    "tenacity>=8",
+    "httpx",
+]
+
+[project.optional-dependencies]
+rag = ["chromadb", "faiss-cpu", "sentence-transformers", "tiktoken"]
+server = ["fastapi", "uvicorn[standard]", "sse-starlette"]
+tools = ["arxiv", "wolframalpha", "numexpr", "pandas", "matplotlib"]
+export = ["markdown", "reportlab", "weasyprint", "jinja2"]
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+    "pytest-asyncio",
+    "ruff",
+    "black",
+    "mypy",
+    "pre-commit",
+    "types-PyYAML",
+]
+all = [
+    "personal-aiagent[rag,server,tools,export,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/dzweben/personal-aiagent"
+Repository = "https://github.com/dzweben/personal-aiagent"
+Issues = "https://github.com/dzweben/personal-aiagent/issues"
+
+[project.scripts]
+aiagent = "agent.cli:app"
+
+[tool.setuptools]
+packages = ["agent", "agent.tools", "agent.rag", "agent.server"]
+py-modules = ["main", "tools"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP", "C4"]
+ignore = ["E501", "B008"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["agent"]
+omit = ["agent/server/*", "tests/*"]
