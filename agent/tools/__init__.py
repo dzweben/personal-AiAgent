@@ -44,11 +44,14 @@ def build_tools(enabled: list[str] | None = None) -> list:
     from agent.tools import (  # noqa: F401
         calculator,
         convert,
+        crypto,
         datetime_tool,
         dev,
         files,
+        geo,
         python_repl,
         text,
+        translate,
         web,
         wiki,
     )
