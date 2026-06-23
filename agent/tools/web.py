@@ -6,7 +6,7 @@ project. the http_get / fetch_url tools are new and let the agent actually read 
 
 from __future__ import annotations
 
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 
 from agent.tools import register
 

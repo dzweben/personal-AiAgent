@@ -12,7 +12,7 @@ import io
 import math
 import statistics
 
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 
 from agent.tools import register
 

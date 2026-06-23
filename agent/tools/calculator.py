@@ -11,7 +11,7 @@ import ast
 import math
 import operator
 
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 
 from agent.tools import register
 

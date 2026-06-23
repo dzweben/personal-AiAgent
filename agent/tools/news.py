@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 
 from agent.tools import register
 

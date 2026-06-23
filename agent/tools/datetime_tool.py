@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 
 from agent.tools import register
 

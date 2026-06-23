@@ -6,7 +6,7 @@ to the arxiv export api directly over http so it still works on a minimal instal
 
 from __future__ import annotations
 
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 
 from agent.tools import register
 
