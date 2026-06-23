@@ -43,6 +43,7 @@ def research(
     model: Optional[str] = typer.Option(None, help="override the model name"),
     temperature: Optional[float] = typer.Option(None, help="0 is focused, 1 is loose"),
     detailed: bool = typer.Option(False, help="use the more careful, source heavy prompt"),
+    persona: Optional[str] = typer.Option(None, help="researcher | skeptic | eli5 | journalist | tutor | devils_advocate"),
     export_as: Optional[str] = typer.Option(None, "--export", help="also save to md/json/html/txt/pdf"),
     remember: bool = typer.Option(False, help="store this turn in conversation memory"),
     config: Optional[str] = typer.Option(None, help="path to a yaml config file"),
@@ -61,7 +62,7 @@ def research(
 
         mem = ConversationMemory(path=settings.memory.path, max_history=settings.memory.max_history)
 
-    agent = build_agent(settings=settings, detailed=detailed, memory=mem)
+    agent = build_agent(settings=settings, detailed=detailed, memory=mem, persona=persona)
     with console.console().status("thinking...") if console.console() else _noop():
         result = agent.research(query)
 
@@ -126,6 +127,29 @@ def formats():
     from agent.exporters import available_formats
 
     console.info("export formats: " + ", ".join(available_formats()))
+
+
+@app.command(name="personas")
+def list_personas():
+    """list the personas you can run the agent as."""
+    from agent import personas
+
+    for name in personas.names():
+        p = personas.get(name)
+        console.info(f"{name}: {p.blurb}")
+
+
+@app.command()
+def cost(
+    prompt: str = typer.Argument(..., help="the text you plan to send"),
+    model: str = typer.Option("gpt-4o", help="which model to price against"),
+    output_tokens: int = typer.Option(500, help="rough guess at the response length"),
+):
+    """estimate the token count and dollar cost of a prompt before you send it."""
+    from agent.usage import estimate_cost
+
+    est = estimate_cost(prompt, expected_output_tokens=output_tokens, model=model)
+    console.info(est.pretty())
 
 
 @app.command()

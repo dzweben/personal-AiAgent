@@ -38,9 +38,11 @@ class ResearchAgent:
         tools: Optional[list] = None,
         memory: Any = None,
         detailed: bool = False,
+        persona: Optional[str] = None,
     ):
         self.settings = settings or load_settings()
         self.detailed = detailed
+        self.persona = persona
         self.memory = memory
         self._tools = tools
         self._executor = None
@@ -64,9 +66,18 @@ class ResearchAgent:
     def _build_prompt(self, parser):
         from langchain_core.prompts import ChatPromptTemplate
 
+        base_system = system_prompt(self.detailed)
+        if self.persona:
+            from agent import personas
+
+            try:
+                base_system = personas.apply(base_system, self.persona)
+            except KeyError as exc:
+                log.warning("%s, ignoring persona", exc)
+
         prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", system_prompt(self.detailed)),
+                ("system", base_system),
                 ("placeholder", "{chat_history}"),
                 ("human", "{query}"),
                 ("placeholder", "{agent_scratchpad}"),
@@ -155,6 +166,9 @@ def build_agent(
     detailed: bool = False,
     memory: Any = None,
     tools: Optional[list] = None,
+    persona: Optional[str] = None,
 ) -> ResearchAgent:
     """convenience constructor used by main.py, the cli, and the api."""
-    return ResearchAgent(settings=settings, tools=tools, memory=memory, detailed=detailed).build()
+    return ResearchAgent(
+        settings=settings, tools=tools, memory=memory, detailed=detailed, persona=persona
+    ).build()
