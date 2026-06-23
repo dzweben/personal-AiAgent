@@ -43,15 +43,18 @@ def build_tools(enabled: list[str] | None = None) -> list:
     # import here so importing the package stays cheap
     from agent.tools import (  # noqa: F401
         calculator,
+        convert,
         datetime_tool,
+        dev,
         files,
         python_repl,
+        text,
         web,
         wiki,
     )
 
     # these ones lean on optional deps or api keys, so import them defensively
-    for optional in ("arxiv", "news", "weather"):
+    for optional in ("arxiv", "news", "weather", "symbolic"):
         try:
             __import__(f"agent.tools.{optional}")
         except Exception:  # noqa: BLE001
