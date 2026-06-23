@@ -81,15 +81,17 @@ def _eval_node(node: ast.AST) -> float:
 
 def safe_calc(expression: str) -> str:
     expression = expression.strip().strip("`")
-    # prefer numexpr when it is around, it is both safe and quick
+    # prefer numexpr when it is around, it is both safe and quick. but numexpr only knows
+    # a subset of functions (no factorial, for instance), so if it chokes we quietly fall
+    # through to the little ast evaluator below rather than giving up.
     try:
         import numexpr
 
         return str(numexpr.evaluate(expression).item())
     except ImportError:
         pass
-    except Exception as exc:  # noqa: BLE001
-        return f"could not evaluate: {exc}"
+    except Exception:  # noqa: BLE001 - let the ast path have a crack at it
+        pass
 
     try:
         tree = ast.parse(expression, mode="eval")
