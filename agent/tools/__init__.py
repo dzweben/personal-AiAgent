@@ -50,10 +50,12 @@ def build_tools(enabled: list[str] | None = None) -> list:
         wiki,
     )
 
-    try:
-        from agent.tools import arxiv  # noqa: F401
-    except Exception:
-        pass
+    # these ones lean on optional deps or api keys, so import them defensively
+    for optional in ("arxiv", "news", "weather"):
+        try:
+            __import__(f"agent.tools.{optional}")
+        except Exception:  # noqa: BLE001
+            pass
 
     names = enabled if enabled is not None else list(_REGISTRY.keys())
     tools: list = []
