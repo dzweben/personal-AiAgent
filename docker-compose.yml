@@ -1,0 +1,16 @@
+# spin up the agent api with: docker compose up
+services:
+  api:
+    build: .
+    command: python -m agent.server
+    ports:
+      - "8000:8000"
+    environment:
+      - AIAGENT_HOST=0.0.0.0
+      - AIAGENT_PORT=8000
+    env_file:
+      - .env
+    volumes:
+      - ./exports:/app/exports
+      - ./logs:/app/logs
+    restart: unless-stopped
