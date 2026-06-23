@@ -1,10 +1,26 @@
- langchain
- wikipedia
- langchain-community
- langchain-openai
- langchain-anthropic
- python-dotenv
- pydantic
- ddgs
+# core runtime deps. this is the "just make it run" set.
+# for the extras (rag, server, export, dev tooling) install the package instead:
+#   pip install -e ".[all]"
 
- 
+# langchain pinned to the 0.3 line so the classic agent api keeps working
+langchain>=0.3,<1.0
+langchain-core>=0.3,<1.0
+langchain-community>=0.3,<1.0
+langchain-openai>=0.2,<1.0
+langchain-anthropic>=0.2,<1.0
+
+# tools and search
+wikipedia
+ddgs
+httpx
+
+# structured output and settings
+pydantic>=2
+pydantic-settings>=2
+python-dotenv
+pyyaml
+
+# nice cli + resilience
+rich>=13
+typer>=0.12
+tenacity>=8
