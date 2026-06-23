@@ -1,0 +1,36 @@
+# auto label PRs based on which files they touch. used by labeler.yml workflow.
+tools:
+  - changed-files:
+      - any-glob-to-any-file: "agent/tools/**"
+
+rag:
+  - changed-files:
+      - any-glob-to-any-file: "agent/rag/**"
+
+server:
+  - changed-files:
+      - any-glob-to-any-file: "agent/server/**"
+
+cli:
+  - changed-files:
+      - any-glob-to-any-file: "agent/cli.py"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: "tests/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "requirements.txt"
+          - "pyproject.toml"
