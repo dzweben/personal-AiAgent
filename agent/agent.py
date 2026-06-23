@@ -11,7 +11,7 @@ still exactly what happens under the hood, i just wrapped it so it is reusable a
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from agent.config import Settings, load_settings
 from agent.logging_utils import get_logger, setup_logging
@@ -27,18 +27,18 @@ class AgentResult:
 
     query: str
     raw: dict
-    structured: Optional[ResearchResponse]
+    structured: ResearchResponse | None
     output_text: str
 
 
 class ResearchAgent:
     def __init__(
         self,
-        settings: Optional[Settings] = None,
-        tools: Optional[list] = None,
+        settings: Settings | None = None,
+        tools: list | None = None,
         memory: Any = None,
         detailed: bool = False,
-        persona: Optional[str] = None,
+        persona: str | None = None,
     ):
         self.settings = settings or load_settings()
         self.detailed = detailed
@@ -85,7 +85,7 @@ class ResearchAgent:
         ).partial(format_instructions=parser.get_format_instructions())
         return prompt
 
-    def build(self) -> "ResearchAgent":
+    def build(self) -> ResearchAgent:
         """assemble the underlying langchain AgentExecutor. lazy, called on first use."""
         if self._executor is not None:
             return self
@@ -135,7 +135,7 @@ class ResearchAgent:
         raw = self._with_retries(_run)
         output_text = raw.get("output", "") if isinstance(raw, dict) else str(raw)
 
-        structured: Optional[ResearchResponse] = None
+        structured: ResearchResponse | None = None
         try:
             structured = self._parser.parse(output_text)
         except Exception as exc:  # noqa: BLE001
@@ -162,11 +162,11 @@ class ResearchAgent:
 
 
 def build_agent(
-    settings: Optional[Settings] = None,
+    settings: Settings | None = None,
     detailed: bool = False,
     memory: Any = None,
-    tools: Optional[list] = None,
-    persona: Optional[str] = None,
+    tools: list | None = None,
+    persona: str | None = None,
 ) -> ResearchAgent:
     """convenience constructor used by main.py, the cli, and the api."""
     return ResearchAgent(

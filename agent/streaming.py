@@ -7,10 +7,11 @@ langchain base handler lazily so importing this module never forces a langchain 
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 
-def make_stream_handler(on_token: Optional[Callable[[str], None]] = None):
+def make_stream_handler(on_token: Callable[[str], None] | None = None):
     """build a callback handler that fires on_token for each new chunk.
 
     returns None if langchain is not importable, so callers can just skip streaming.

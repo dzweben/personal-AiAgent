@@ -59,7 +59,7 @@ _SAFE_GLOBALS = {
 def run_python(code: str) -> str:
     code = code.strip().strip("`")
     if code.startswith("python"):
-        code = code[len("python"):].lstrip()
+        code = code[len("python") :].lstrip()
 
     lowered = code.lower()
     for bad in _BLOCKLIST:

@@ -6,15 +6,13 @@ hard depends on it. the goal is just to make the cli feel nice.
 
 from __future__ import annotations
 
-from typing import Optional
-
 try:
     from rich.console import Console
     from rich.markdown import Markdown
     from rich.panel import Panel
     from rich.table import Table
 
-    _console: Optional["Console"] = Console()
+    _console: Console | None = Console()
     _HAS_RICH = True
 except ImportError:  # pragma: no cover
     _console = None

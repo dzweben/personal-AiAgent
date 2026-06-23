@@ -9,7 +9,7 @@ new code should prefer `from agent.tools import build_tools`.
 
 from __future__ import annotations
 
-from agent.tools.files import save_to_txt, make_save
+from agent.tools.files import make_save, save_to_txt
 from agent.tools.web import make_search
 from agent.tools.wiki import make_wiki
 

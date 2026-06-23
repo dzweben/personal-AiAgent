@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -50,7 +50,7 @@ class CacheConfig(BaseModel):
 
 class LoggingConfig(BaseModel):
     level: str = "INFO"
-    file: Optional[str] = "logs/agent.log"
+    file: str | None = "logs/agent.log"
     rich_tracebacks: bool = True
 
 

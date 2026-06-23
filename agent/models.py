@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,9 +25,9 @@ class ResearchResponse(BaseModel):
 class Source(BaseModel):
     """a single source the agent leaned on, with a bit more structure than a bare url."""
 
-    title: Optional[str] = None
-    url: Optional[str] = None
-    snippet: Optional[str] = None
+    title: str | None = None
+    url: str | None = None
+    snippet: str | None = None
     accessed_at: datetime = Field(default_factory=datetime.now)
 
     def short(self) -> str:

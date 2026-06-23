@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 _CONFIGURED = False
 
@@ -20,7 +19,7 @@ def get_logger(name: str = "aiagent") -> logging.Logger:
 
 def setup_logging(
     level: str = "INFO",
-    file: Optional[str] = "logs/agent.log",
+    file: str | None = "logs/agent.log",
     rich_tracebacks: bool = True,
 ) -> logging.Logger:
     """configure the root-ish 'aiagent' logger once. safe to call repeatedly."""
@@ -69,6 +68,4 @@ def setup_logging(
 def disable_noisy_loggers() -> None:
     """the http libraries love to spam at INFO, turn them down a notch."""
     for noisy in ("httpx", "httpcore", "urllib3", "openai", "anthropic"):
-        logging.getLogger(noisy).setLevel(
-            os.environ.get("AIAGENT_DEP_LOG_LEVEL", "WARNING")
-        )
+        logging.getLogger(noisy).setLevel(os.environ.get("AIAGENT_DEP_LOG_LEVEL", "WARNING"))

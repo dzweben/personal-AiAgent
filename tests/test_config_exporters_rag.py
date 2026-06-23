@@ -20,7 +20,9 @@ def test_settings_overrides_win():
 
 
 def test_export_formats(tmp_dir):
-    r = ResearchResponse(topic="Tea", summary="good", sources=["https://x.test"], tools_used=["search"])
+    r = ResearchResponse(
+        topic="Tea", summary="good", sources=["https://x.test"], tools_used=["search"]
+    )
     for fmt in ("json", "markdown", "txt", "html"):
         path = export(r, fmt=fmt, directory=tmp_dir)
         assert os.path.exists(path)

@@ -74,7 +74,7 @@ def to_txt(result: Any, directory: str = "exports") -> str:
     body = (
         f"Topic: {data.get('topic','')}\n\n"
         f"{data.get('summary','')}\n\n"
-        f"Sources:\n" + "\n".join(f"  - {s}" for s in (data.get('sources') or [])) + "\n\n"
+        f"Sources:\n" + "\n".join(f"  - {s}" for s in (data.get("sources") or [])) + "\n\n"
         f"Tools: {', '.join(data.get('tools_used') or [])}\n"
     )
     path.write_text(body, encoding="utf-8")

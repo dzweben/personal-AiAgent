@@ -84,9 +84,7 @@ def _define(word: str) -> str:
     if not word:
         return "give me a word to define"
     try:
-        resp = httpx.get(
-            f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}", timeout=15
-        )
+        resp = httpx.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}", timeout=15)
         resp.raise_for_status()
         data = resp.json()
     except Exception as exc:  # noqa: BLE001

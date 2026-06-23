@@ -10,7 +10,6 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from statistics import mean
-from typing import Optional
 
 from agent.logging_utils import get_logger
 
@@ -31,7 +30,7 @@ class CaseResult:
     n_tools: int
     keyword_hits: int
     seconds: float
-    error: Optional[str] = None
+    error: str | None = None
 
 
 @dataclass

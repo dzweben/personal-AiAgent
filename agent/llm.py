@@ -17,7 +17,7 @@ def build_llm(settings: Settings, streaming: bool | None = None):
     """return a langchain chat model configured from settings."""
     provider = (settings.provider or "openai").lower()
     stream = settings.stream if streaming is None else streaming
-    common = dict(temperature=settings.temperature, streaming=stream)
+    common = {"temperature": settings.temperature, "streaming": stream}
 
     if provider == "openai":
         from langchain_openai import ChatOpenAI

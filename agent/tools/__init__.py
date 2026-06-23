@@ -8,7 +8,7 @@ whole agent, which is the behaviour i actually want day to day.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from agent.logging_utils import get_logger
 

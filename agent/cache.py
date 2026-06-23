@@ -11,7 +11,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class DiskCache:
@@ -27,7 +27,7 @@ class DiskCache:
     def _file(self, key: str) -> Path:
         return self.dir / f"{key}.json"
 
-    def get(self, *parts: Any) -> Optional[Any]:
+    def get(self, *parts: Any) -> Any | None:
         f = self._file(self._key(*parts))
         if not f.exists():
             return None

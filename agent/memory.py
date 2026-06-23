@@ -7,10 +7,10 @@ i can go back and look at what i asked last week. nothing fancy, just a single t
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
 
 from agent.logging_utils import get_logger
 
@@ -29,7 +29,9 @@ CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session);
 
 
 class ConversationMemory:
-    def __init__(self, path: str = ".agent_memory.sqlite", session: str = "default", max_history: int = 20):
+    def __init__(
+        self, path: str = ".agent_memory.sqlite", session: str = "default", max_history: int = 20
+    ):
         self.path = path
         self.session = session
         self.max_history = max_history

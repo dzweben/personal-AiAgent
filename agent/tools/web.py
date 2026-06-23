@@ -30,7 +30,9 @@ def _http_get(url: str) -> str:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
     try:
-        resp = httpx.get(url, timeout=20, follow_redirects=True, headers={"User-Agent": "personal-aiagent/0.2"})
+        resp = httpx.get(
+            url, timeout=20, follow_redirects=True, headers={"User-Agent": "personal-aiagent/0.2"}
+        )
         resp.raise_for_status()
     except Exception as exc:  # noqa: BLE001
         return f"could not fetch {url}: {exc}"
@@ -59,7 +61,9 @@ def _fetch_readable(url: str) -> str:
         import re
 
         # cheap and cheerful html to text, good enough for the agent to skim
-        no_scripts = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", raw, flags=re.DOTALL | re.IGNORECASE)
+        no_scripts = re.sub(
+            r"<(script|style)[^>]*>.*?</\1>", " ", raw, flags=re.DOTALL | re.IGNORECASE
+        )
         no_tags = re.sub(r"<[^>]+>", " ", no_scripts)
         collapsed = re.sub(r"\s+", " ", no_tags).strip()
         return collapsed[:6000]

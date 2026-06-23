@@ -107,9 +107,7 @@ def _convert_currency(spec: str) -> str:
     except (ValueError, IndexError):
         return "give me something like '100 usd to eur'"
     try:
-        resp = httpx.get(
-            f"https://open.er-api.com/v6/latest/{src}", timeout=15
-        )
+        resp = httpx.get(f"https://open.er-api.com/v6/latest/{src}", timeout=15)
         resp.raise_for_status()
         rates = resp.json().get("rates", {})
     except Exception as exc:  # noqa: BLE001

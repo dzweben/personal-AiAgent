@@ -16,7 +16,6 @@ import hashlib
 import math
 import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 from agent.logging_utils import get_logger
 
@@ -29,7 +28,6 @@ def simple_chunk(text: str, chunk_size: int = 1000, overlap: int = 150) -> list[
     if not words:
         return []
     chunks: list[str] = []
-    step = max(1, chunk_size - overlap)
     # work in characters but cut on words so we do not slice mid token
     buf: list[str] = []
     length = 0
@@ -61,7 +59,7 @@ def _hash_embed(text: str, dims: int = 256) -> list[float]:
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
 @dataclass
@@ -72,7 +70,9 @@ class _Doc:
 
 
 class VectorStore:
-    def __init__(self, backend: str = "memory", collection: str = "research", path: str = ".chroma"):
+    def __init__(
+        self, backend: str = "memory", collection: str = "research", path: str = ".chroma"
+    ):
         self.backend = backend
         self.collection = collection
         self.path = path
@@ -92,7 +92,7 @@ class VectorStore:
             log.warning("chroma backend unavailable (%s), falling back to memory store", exc)
             self.backend = "memory"
 
-    def add(self, text: str, meta: Optional[dict] = None) -> int:
+    def add(self, text: str, meta: dict | None = None) -> int:
         """add one document (or chunk). returns how many chunks were stored."""
         meta = meta or {}
         chunks = simple_chunk(text)
@@ -110,7 +110,9 @@ class VectorStore:
             res = self._coll.query(query_texts=[query], n_results=top_k)
             docs = res.get("documents", [[]])[0]
             metas = res.get("metadatas", [[]])[0]
-            return [{"text": d, "meta": m, "score": None} for d, m in zip(docs, metas)]
+            return [
+                {"text": d, "meta": m, "score": None} for d, m in zip(docs, metas, strict=False)
+            ]
 
         qv = _hash_embed(query)
         scored = [(_cosine(qv, d.vec), d) for d in self._docs]

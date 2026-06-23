@@ -13,8 +13,6 @@ personal project and i run it on localhost.
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 def create_app():
     """build and return the FastAPI app. imported lazily so fastapi stays optional."""
@@ -35,10 +33,10 @@ def create_app():
 
     class ResearchRequest(BaseModel):
         query: str
-        provider: Optional[str] = None
-        model: Optional[str] = None
+        provider: str | None = None
+        model: str | None = None
         detailed: bool = False
-        export_as: Optional[str] = None
+        export_as: str | None = None
 
     @app.get("/")
     def root():

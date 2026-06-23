@@ -7,8 +7,8 @@ couple of styles. nothing academic-grade, just enough to make a report look tidy
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable
 
 from agent.models import Source
 

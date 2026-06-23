@@ -9,8 +9,6 @@ built on typer so the help text and arg parsing come for free.
 
 from __future__ import annotations
 
-from typing import Optional
-
 try:
     import typer
 except ImportError as exc:  # pragma: no cover
@@ -39,14 +37,18 @@ def _settings(provider, model, temperature, verbose, config):
 @app.command()
 def research(
     query: str = typer.Argument(..., help="what do you want me to look into?"),
-    provider: Optional[str] = typer.Option(None, help="openai | anthropic | groq | google"),
-    model: Optional[str] = typer.Option(None, help="override the model name"),
-    temperature: Optional[float] = typer.Option(None, help="0 is focused, 1 is loose"),
+    provider: str | None = typer.Option(None, help="openai | anthropic | groq | google"),
+    model: str | None = typer.Option(None, help="override the model name"),
+    temperature: float | None = typer.Option(None, help="0 is focused, 1 is loose"),
     detailed: bool = typer.Option(False, help="use the more careful, source heavy prompt"),
-    persona: Optional[str] = typer.Option(None, help="researcher | skeptic | eli5 | journalist | tutor | devils_advocate"),
-    export_as: Optional[str] = typer.Option(None, "--export", help="also save to md/json/html/txt/pdf"),
+    persona: str | None = typer.Option(
+        None, help="researcher | skeptic | eli5 | journalist | tutor | devils_advocate"
+    ),
+    export_as: str | None = typer.Option(
+        None, "--export", help="also save to md/json/html/txt/pdf"
+    ),
     remember: bool = typer.Option(False, help="store this turn in conversation memory"),
-    config: Optional[str] = typer.Option(None, help="path to a yaml config file"),
+    config: str | None = typer.Option(None, help="path to a yaml config file"),
     verbose: bool = typer.Option(True, help="show the agent's tool calls"),
 ):
     """run a one shot research query and print the structured result."""
@@ -77,10 +79,10 @@ def research(
 
 @app.command()
 def chat(
-    provider: Optional[str] = typer.Option(None),
-    model: Optional[str] = typer.Option(None),
+    provider: str | None = typer.Option(None),
+    model: str | None = typer.Option(None),
     session: str = typer.Option("default", help="name this conversation so memory groups it"),
-    config: Optional[str] = typer.Option(None),
+    config: str | None = typer.Option(None),
 ):
     """interactive REPL with the agent. type 'exit' or ctrl-d to leave."""
     from agent.agent import build_agent
@@ -156,7 +158,7 @@ def cost(
 def memory(
     action: str = typer.Argument("show", help="show | clear | sessions"),
     session: str = typer.Option("default"),
-    config: Optional[str] = typer.Option(None),
+    config: str | None = typer.Option(None),
 ):
     """inspect or wipe the conversation memory."""
     from agent.memory import ConversationMemory
@@ -170,15 +172,22 @@ def memory(
         console.info("sessions: " + (", ".join(mem.sessions()) or "(none)"))
     else:
         for role, content in mem.history():
-            who = "[cyan]you[/cyan]" if role == "user" else "[green]agent[/green]"
-            console.markdown(f"**{role}**: {content[:300]}") if console.console() else print(role, content[:300])
+            (
+                console.markdown(f"**{role}**: {content[:300]}")
+                if console.console()
+                else print(role, content[:300])
+            )
 
 
 @app.command(name="config")
-def show_config(config: Optional[str] = typer.Option(None)):
+def show_config(config: str | None = typer.Option(None)):
     """print the resolved settings so you can see what the agent will actually do."""
     settings = load_settings(config_path=config)
-    console.markdown("```json\n" + settings.model_dump_json(indent=2) + "\n```") if console.console() else print(settings.model_dump_json(indent=2))
+    (
+        console.markdown("```json\n" + settings.model_dump_json(indent=2) + "\n```")
+        if console.console()
+        else print(settings.model_dump_json(indent=2))
+    )
 
 
 @app.command()

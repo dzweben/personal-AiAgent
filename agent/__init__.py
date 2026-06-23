@@ -6,7 +6,7 @@ you can do `from agent import build_agent, Settings` and get going.
 """
 
 from agent.config import Settings, load_settings
-from agent.models import ResearchResponse, Citation, Source
+from agent.models import Citation, ResearchResponse, Source
 
 __version__ = "0.2.0"
 

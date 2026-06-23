@@ -21,7 +21,9 @@ def _weather(location: str) -> str:
         return "no OPENWEATHER_API_KEY set"
     params = {"q": location.strip(), "appid": key, "units": "metric"}
     try:
-        resp = httpx.get("https://api.openweathermap.org/data/2.5/weather", params=params, timeout=15)
+        resp = httpx.get(
+            "https://api.openweathermap.org/data/2.5/weather", params=params, timeout=15
+        )
         resp.raise_for_status()
         d = resp.json()
     except Exception as exc:  # noqa: BLE001
