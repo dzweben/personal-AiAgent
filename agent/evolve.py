@@ -56,6 +56,7 @@ class EvolveResult:
     best: list[str]
     best_fitness: float
     history: list[float] = field(default_factory=list)
+    diversity_history: list[float] = field(default_factory=list)
 
     def prompt(self) -> str:
         return render(self.best)
@@ -85,35 +86,91 @@ def _tournament(pop, fitness, rng: random.Random, k: int = 3):
     return max(contenders, key=fitness)
 
 
+def _diversity(population: list[list[str]]) -> float:
+    """fraction of the population that is genetically unique. 1.0 = no duplicates."""
+    if not population:
+        return 0.0
+    unique = {tuple(g) for g in population}
+    return round(len(unique) / len(population), 3)
+
+
 def evolve(
     pool: list[str] | None = None,
     fitness=heuristic_fitness,
     generations: int = 12,
     pop_size: int = 16,
     seed: int = 0,
+    mutate=_mutate,
+    crossover=_crossover,
+    mutation_rate: float = 0.7,
+    keep_diverse: bool = True,
 ) -> EvolveResult:
-    """run a small genetic algorithm over prompt genomes and return the best one found."""
+    """run a small genetic algorithm over prompt genomes and return the best one found.
+
+    `mutate(genome, pool, rng)` and `crossover(a, b, rng)` are swappable so you can plug in your
+    own operators. with keep_diverse, elitism dedupes survivors so the population doesn't collapse
+    onto one genome -- which keeps the search from getting stuck in a local optimum too early.
+    """
     rng = random.Random(seed)
     pool = pool or DEFAULT_POOL
     population = [rng.sample(pool, k=rng.randint(2, min(5, len(pool)))) for _ in range(pop_size)]
     best = max(population, key=fitness)
     history = [fitness(best)]
+    diversity_history = [_diversity(population)]
 
     for _ in range(generations):
         ranked = sorted(population, key=fitness, reverse=True)
-        survivors = ranked[: max(2, pop_size // 4)]  # elitism
+        if keep_diverse:
+            # keep the best *distinct* genomes as elites
+            survivors, seen = [], set()
+            for g in ranked:
+                key = tuple(g)
+                if key not in seen:
+                    seen.add(key)
+                    survivors.append(g)
+                if len(survivors) >= max(2, pop_size // 4):
+                    break
+        else:
+            survivors = ranked[: max(2, pop_size // 4)]
         children = list(survivors)
         while len(children) < pop_size:
             parent_a = _tournament(population, fitness, rng)
             parent_b = _tournament(population, fitness, rng)
-            child = _crossover(parent_a, parent_b, rng)
-            if rng.random() < 0.7:
-                child = _mutate(child, pool, rng)
+            child = crossover(parent_a, parent_b, rng)
+            if rng.random() < mutation_rate:
+                child = mutate(child, pool, rng)
             children.append(child)
         population = children
         gen_best = max(population, key=fitness)
         if fitness(gen_best) > fitness(best):
             best = gen_best
         history.append(fitness(best))
+        diversity_history.append(_diversity(population))
 
-    return EvolveResult(best=best, best_fitness=fitness(best), history=history)
+    return EvolveResult(
+        best=best,
+        best_fitness=fitness(best),
+        history=history,
+        diversity_history=diversity_history,
+    )
+
+
+def eval_harness_fitness(agent, cases, settings=None):
+    """build a fitness that scores a genome by running the agent (with that prompt) over cases.
+
+    this is the "evolve against real behaviour" hook: each genome becomes a system prompt, the
+    agent answers the eval cases, and the fitness is the mean scorecard of its answers. needs a
+    live agent + api key, so it's not exercised in the offline test suite.
+    """
+    from agent.evaluate import EvalCase, run_eval  # noqa: F401 - imported for the caller's clarity
+    from agent.scorecard import score as _score
+
+    def fitness(genome: list[str]) -> float:
+        prompt = render(genome)
+        scores = []
+        for case in cases:
+            answer = agent.research(case, system_override=prompt).output_text  # type: ignore[call-arg]
+            scores.append(_score(answer).overall)
+        return round(sum(scores) / len(scores), 4) if scores else 0.0
+
+    return fitness
