@@ -58,14 +58,36 @@ def vote(answers: list[str]) -> str:
     return answers[best]
 
 
+def best_by_score(answers: list[str]) -> str:
+    """pick the single answer the scorecard rates highest. quality over consensus."""
+    if not answers:
+        return ""
+    from agent.scorecard import score
+
+    return max(answers, key=lambda a: score(a).overall)
+
+
+# the merge strategies you can name with `strategy=`. each maps a list of answers -> one answer.
+STRATEGIES = {
+    "vote": vote,
+    "best": best_by_score,
+    "longest": lambda answers: max(answers, key=len) if answers else "",
+}
+
+
 def ensemble(
     query: str,
     personas: list[str] | None = None,
     answer=None,
     merge=None,
+    strategy: str = "vote",
     settings=None,
 ) -> EnsembleResult:
-    """gather one answer per persona and merge them. `answer`/`merge` injectable for testing."""
+    """gather one answer per persona and merge them.
+
+    `answer(persona, q)` and `merge(query, answers_dict)` are injectable for testing. when no
+    `merge` is given, the named `strategy` (vote / best / longest) reconciles the answers.
+    """
     personas = personas or DEFAULT_PERSONAS
     if answer is None:
         from agent.llm import complete
@@ -83,8 +105,9 @@ def ensemble(
     for persona in personas:
         result.answers[persona] = answer(persona, query).strip()
 
-    if merge is None:
-        result.merged = vote(list(result.answers.values()))
-    else:
+    if merge is not None:
         result.merged = merge(query, result.answers).strip()
+    else:
+        reconcile = STRATEGIES.get(strategy, vote)
+        result.merged = reconcile(list(result.answers.values()))
     return result
