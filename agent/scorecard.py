@@ -39,21 +39,43 @@ def _sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
 
 
-def score(answer: str, n_sources: int = 0) -> Scorecard:
-    """grade an answer on a few axes and return a blended 0..1 score."""
+# default blend weights; override per-call to tune what the score rewards.
+DEFAULT_WEIGHTS = {
+    "length": 0.15,
+    "sourcing": 0.2,
+    "hedging": 0.15,
+    "readability": 0.13,
+    "concreteness": 0.17,
+    "specificity": 0.1,
+    "structure": 0.1,
+}
+
+_PART_NAMES = tuple(DEFAULT_WEIGHTS)
+
+# specificity markers: dates, percentages, units, proper-noun-ish capitalised mid-sentence words
+_SPECIFIC_RE = re.compile(
+    r"\b\d{4}\b|\d+%|\b\d+(\.\d+)?\s?(kg|km|m|mm|cm|ml|l|°c|°f|hz|gb|mb)\b", re.IGNORECASE
+)
+
+
+def score(answer: str, n_sources: int = 0, weights: dict[str, float] | None = None) -> Scorecard:
+    """grade an answer on several axes and return a blended 0..1 score.
+
+    pass `weights` (a partial dict is fine) to retune which qualities matter; anything omitted
+    falls back to DEFAULT_WEIGHTS.
+    """
+    weights = {**DEFAULT_WEIGHTS, **(weights or {})}
     text = answer.strip()
     if not text:
         # nothing to grade -- don't let empty defaults (no hedges, no long sentences) inflate it
-        parts = dict.fromkeys(("length", "sourcing", "hedging", "readability", "concreteness"), 0.0)
-        return Scorecard(overall=0.0, parts=parts)
+        return Scorecard(overall=0.0, parts=dict.fromkeys(_PART_NAMES, 0.0))
     words = re.findall(r"\w+", text)
     n_words = len(words)
     sentences = _sentences(text)
+    low = text.lower()
 
     # length: reward a substantive but not bloated answer (sweet spot ~40-250 words)
-    if n_words == 0:
-        length = 0.0
-    elif n_words < 40:
+    if n_words < 40:
         length = n_words / 40
     elif n_words <= 250:
         length = 1.0
@@ -65,7 +87,6 @@ def score(answer: str, n_sources: int = 0) -> Scorecard:
     sourcing = min(1.0, (n_sources + urls) / 3)
 
     # hedging: too many weasel words drags it down
-    low = text.lower()
     hedge_hits = sum(low.count(h) for h in _HEDGES)
     hedging = max(0.0, 1.0 - hedge_hits * 0.15)
 
@@ -73,8 +94,15 @@ def score(answer: str, n_sources: int = 0) -> Scorecard:
     avg_len = (n_words / len(sentences)) if sentences else 0
     readability = 1.0 if avg_len <= 28 else max(0.2, 28 / avg_len)
 
-    # concreteness: numbers and named specifics are a good sign
+    # concreteness: numbers are a good sign
     concreteness = min(1.0, len(re.findall(r"\b\d+\b", text)) / 4)
+
+    # specificity: dates, percentages, units -> the answer commits to particulars
+    specificity = min(1.0, len(_SPECIFIC_RE.findall(text)) / 3)
+
+    # structure: multiple sentences, or list/heading markers, read as organised
+    has_list = bool(re.search(r"(^|\n)\s*[-*\d]", text))
+    structure = min(1.0, (len(sentences) / 4) * (1.2 if has_list else 1.0))
 
     parts = {
         "length": round(length, 3),
@@ -82,13 +110,17 @@ def score(answer: str, n_sources: int = 0) -> Scorecard:
         "hedging": round(hedging, 3),
         "readability": round(readability, 3),
         "concreteness": round(concreteness, 3),
+        "specificity": round(specificity, 3),
+        "structure": round(structure, 3),
     }
-    weights = {
-        "length": 0.2,
-        "sourcing": 0.25,
-        "hedging": 0.2,
-        "readability": 0.15,
-        "concreteness": 0.2,
-    }
-    overall = sum(parts[k] * weights[k] for k in parts)
+    total_w = sum(weights[k] for k in parts) or 1.0
+    overall = sum(parts[k] * weights[k] for k in parts) / total_w
     return Scorecard(overall=round(overall, 3), parts=parts)
+
+
+def compare(a: str, b: str, n_sources_a: int = 0, n_sources_b: int = 0) -> dict:
+    """score two answers and report which wins, with the per-dimension deltas."""
+    sa, sb = score(a, n_sources_a), score(b, n_sources_b)
+    deltas = {k: round(sb.parts[k] - sa.parts[k], 3) for k in sa.parts}
+    winner = "a" if sa.overall >= sb.overall else "b"
+    return {"a": sa, "b": sb, "winner": winner, "deltas": deltas}
