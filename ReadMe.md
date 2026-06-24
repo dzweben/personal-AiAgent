@@ -155,6 +155,37 @@ poke at dunder attributes. Anything outside that raises `SafetyError` *before* a
 is written to disk or imported. It is still a toy — don't point it at hostile input — but it
 is a toy with a seatbelt. See `agent/forge.py`.
 
+## The council (everything, chained)
+
+The capstone. `aiagent council "<question>"` runs one question through the whole cabinet as a
+single pipeline:
+
+```
+route → ensemble (several personas answer) → fact-check the merged draft
+      → constitutional critique + rewrite → adversarial red-team → score it
+```
+
+Every move is recorded so the run is inspectable (`--show-run`) and the final answer comes back
+graded, fact-checked, and hardened. Under the hood it chains a set of small, individually useful
+building blocks — all offline-testable via injectable callables:
+
+| Module | Command | What it adds |
+|---|---|---|
+| `router` | `aiagent route` | picks the mode that fits a query (debate / swarm / research / …) |
+| `ensemble` | — | several personas answer, reconciled by a consensus vote |
+| `factcheck` | — | extracts claims and verifies each one |
+| `critique` | — | constitutional self-critique + rewrite loop |
+| `redteam` | — | an adversarial battery that tries to break the answer |
+| `scorecard` | `aiagent score` | an offline answer-quality heuristic |
+| `summarize` | — | map-reduce summariser for oversized context |
+| `budget` | — | a cost ceiling so a chained run can't run away |
+| `replay` | — | records the whole run (and can pack it into a capsule) |
+| `pipeline` | — | the composable Context + Step backbone they all ride on |
+
+```bash
+aiagent council "should we migrate to kubernetes?" --show-run
+```
+
 ## The chaos cabinet
 
 A drawer of deliberately over-the-top experiments. Each is its own small module with an
@@ -249,6 +280,16 @@ personal-aiagent/
 │   ├── cache.py            # small ttl disk cache
 │   ├── exporters.py        # md / json / html / txt / pdf export
 │   ├── citations.py        # numbered refs + bibliographies
+│   ├── council.py          # the capstone: chains everything into one graded answer
+│   ├── pipeline.py         # composable Context + Step backbone
+│   ├── router.py           # heuristic query → mode classifier
+│   ├── ensemble.py         # multi-persona answers + consensus vote
+│   ├── factcheck.py        # claim extraction + verification
+│   ├── redteam.py          # adversarial self-attack on an answer
+│   ├── scorecard.py        # offline answer-quality heuristic
+│   ├── summarize.py        # map-reduce summariser
+│   ├── budget.py           # cost ceiling guard
+│   ├── replay.py           # run recorder (capsule-packable)
 │   ├── console.py          # rich pretty printing
 │   ├── cli.py              # the typer cli
 │   ├── tools/              # the tool belt, one module per tool
