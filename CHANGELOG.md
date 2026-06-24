@@ -7,6 +7,18 @@ semantic versioning.
 ## [Unreleased]
 
 ### Added
+- a whole **chaos cabinet** of experimental modules + cli commands:
+  - `forge --llm`: the model writes the tool's body from plain-english intent (still sandboxed)
+  - `debate`: two stances argue a question, a moderator synthesises
+  - `swarm`: a blackboard "society of agents" with roles collaborating over rounds
+  - `evolve`: a genetic algorithm that breeds a better system prompt (offline fitness)
+  - `dream`: free-associates over conversation memory into surreal research prompts
+  - `oracle`: oblique-strategy cards that reframe a stuck question
+  - `critique`: a constitutional self-critique loop that grades and rewrites an answer
+  - `trace`: renders the agent's tool calls as an ascii "thought tree"
+  - `timetravel`: git-backed conversation snapshots with branchable alternate timelines
+  - `capsule`: pack a result into a portable gzip+base64 string (optional qr)
+  - `mcp`: expose the whole tool belt over the Model Context Protocol for other agents
 - the **toolsmith** (`agent/forge.py` + `aiagent forge`): the agent writes, sandbox-checks,
   and hot-loads brand new tools for itself at runtime. an ast validator refuses anything
   outside a tiny allowlist (no os/sys/subprocess/eval/exec/open/dunders) before a line is

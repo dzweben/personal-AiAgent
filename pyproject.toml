@@ -51,6 +51,7 @@ providers = [
     "langchain-mistralai",
     "langchain-cohere",
 ]
+chaos = ["mcp", "qrcode[pil]"]
 dev = [
     "pytest>=8",
     "pytest-cov",
@@ -62,7 +63,7 @@ dev = [
     "types-PyYAML",
 ]
 all = [
-    "personal-aiagent[rag,server,tools,export,providers,dev]",
+    "personal-aiagent[rag,server,tools,export,providers,chaos,dev]",
 ]
 
 [project.urls]

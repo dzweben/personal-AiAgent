@@ -155,6 +155,28 @@ poke at dunder attributes. Anything outside that raises `SafetyError` *before* a
 is written to disk or imported. It is still a toy — don't point it at hostile input — but it
 is a toy with a seatbelt. See `agent/forge.py`.
 
+## The chaos cabinet
+
+A drawer of deliberately over-the-top experiments. Each is its own small module with an
+offline, deterministic core (the LLM-backed ones take an injectable callable, so the test
+suite never needs a key):
+
+```bash
+aiagent forge --name slugify --desc "make text url-safe" --llm   # the model writes the tool
+aiagent debate "is remote work better?" --rounds 3               # two stances argue, mod synthesises
+aiagent swarm "should we rewrite it in rust?" --rounds 2         # a society of role agents
+aiagent evolve --generations 20                                  # genetic algorithm breeds a prompt
+aiagent dream                                                    # free-associate over your memory
+aiagent oracle "why is my model overfitting?"                    # oblique-strategy reframes
+aiagent capsule result.json                                      # pack a result into a portable blob
+aiagent mcp --list                                               # expose the tool belt over MCP
+```
+
+Plus two library-only toys: `agent.critique.refine()` (a constitutional self-critique loop
+that grades and rewrites an answer) and `agent.timetravel.TimeTravel` (git-backed conversation
+snapshots you can branch into alternate timelines and diff). Install the optional bits with
+`pip install 'personal-aiagent[chaos]'`.
+
 ## The HTTP API
 
 ```bash
@@ -210,6 +232,17 @@ personal-aiagent/
 │   ├── models.py           # pydantic schemas, including the original ResearchResponse
 │   ├── llm.py              # provider factory (openai/anthropic/groq/google/ollama/mistral/cohere)
 │   ├── plugins.py          # discovers third-party tools from plugins/ + entry points
+│   ├── forge.py            # the toolsmith: agent writes + hot-loads its own sandboxed tools
+│   ├── debate.py           # dialectic mode: two stances argue, a moderator synthesises
+│   ├── swarm.py            # a blackboard society of role-playing agents
+│   ├── evolve.py           # genetic algorithm that breeds a better system prompt
+│   ├── critique.py         # constitutional self-critique + rewrite loop
+│   ├── dream.py            # free-association over memory into surreal prompts
+│   ├── oracle.py           # oblique-strategy cards to reframe a question
+│   ├── trace.py            # ascii "thought tree" of the agent's tool calls
+│   ├── timetravel.py       # git-backed conversation snapshots + alternate timelines
+│   ├── capsule.py          # portable gzip+base64 result capsules (optional qr)
+│   ├── mcp_server.py       # expose the tool belt over the Model Context Protocol
 │   ├── prompts.py          # system prompts
 │   ├── agent.py            # the ResearchAgent orchestrator
 │   ├── memory.py           # sqlite conversation memory
