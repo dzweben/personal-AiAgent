@@ -19,16 +19,30 @@ class ClaimCheck:
     claim: str
     verdict: str
     note: str = ""
+    importance: float = 0.5
 
 
 # sentences that are usually opinion/instruction rather than checkable fact
 _SOFT_STARTS = ("i ", "you ", "we should", "let's", "please", "consider", "maybe", "perhaps")
 
 
+def claim_importance(claim: str) -> float:
+    """rough 0..1 weight for how much a claim matters: numbers, dates, and length raise it."""
+    score = 0.3
+    if re.search(r"\b\d", claim):
+        score += 0.3  # quantified claims carry more weight
+    if re.search(r"\b\d{4}\b|\d+%", claim):
+        score += 0.2  # dates / percentages are load-bearing specifics
+    if len(claim.split()) >= 12:
+        score += 0.2  # a longer assertion usually says more
+    return min(1.0, round(score, 3))
+
+
 def extract_claims(text: str, max_claims: int = 8) -> list[str]:
-    """split into sentences and keep the ones that look like factual assertions."""
+    """split into sentences and keep the deduped ones that look like factual assertions."""
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
-    claims = []
+    claims: list[str] = []
+    seen: set[str] = set()
     for s in sentences:
         low = s.lower()
         if s.endswith("?"):
@@ -37,6 +51,10 @@ def extract_claims(text: str, max_claims: int = 8) -> list[str]:
             continue
         if len(s.split()) < 4:
             continue  # too short to be a real claim
+        key = re.sub(r"\W+", " ", low).strip()
+        if key in seen:
+            continue  # drop near-duplicate restatements
+        seen.add(key)
         claims.append(s)
         if len(claims) >= max_claims:
             break
@@ -67,7 +85,9 @@ def factcheck(text: str, verify=None, settings=None) -> list[ClaimCheck]:
     for claim in extract_claims(text):
         verdict, note = verify(claim)
         verdict = verdict if verdict in VERDICTS else "unclear"
-        checks.append(ClaimCheck(claim=claim, verdict=verdict, note=note))
+        checks.append(
+            ClaimCheck(claim=claim, verdict=verdict, note=note, importance=claim_importance(claim))
+        )
     return checks
 
 
@@ -77,3 +97,17 @@ def summarize_verdicts(checks: list[ClaimCheck]) -> dict[str, int]:
     for c in checks:
         tally[c.verdict] = tally.get(c.verdict, 0) + 1
     return tally
+
+
+def credibility(checks: list[ClaimCheck]) -> float:
+    """an importance-weighted 0..1 credibility score across all checked claims.
+
+    supported claims count fully, unclear claims half, refuted claims not at all -- each weighted
+    by how load-bearing the claim is. no claims -> 0.5 (nothing to judge either way).
+    """
+    if not checks:
+        return 0.5
+    weight = {"supported": 1.0, "unclear": 0.5, "refuted": 0.0}
+    total = sum(c.importance for c in checks) or 1.0
+    earned = sum(weight.get(c.verdict, 0.5) * c.importance for c in checks)
+    return round(earned / total, 3)

@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from agent.factcheck import extract_claims, factcheck, summarize_verdicts
+from agent.factcheck import (
+    claim_importance,
+    credibility,
+    extract_claims,
+    factcheck,
+    summarize_verdicts,
+)
 
 
 def test_extract_claims_drops_questions_and_advice():
@@ -40,3 +46,28 @@ def test_factcheck_coerces_unknown_verdicts_to_unclear():
         "Cats have whiskers everywhere on their bodies.", verify=lambda c: ("???", "")
     )
     assert checks[0].verdict == "unclear"
+
+
+def test_claim_importance_rises_with_specifics():
+    plain = "Birds can fly through the air gracefully."
+    specific = "In 2020, global emissions fell 5% according to detailed agency measurements."
+    assert claim_importance(specific) > claim_importance(plain)
+
+
+def test_extract_claims_dedupes_restatements():
+    text = "The sky is blue. The sky is blue! Water is wet today."
+    assert len(extract_claims(text)) == 2
+
+
+def test_credibility_weights_by_importance():
+    text = "In 2020 GDP rose 5 percent overall here. The moon is made entirely of cheese."
+
+    def verify(c):
+        return ("refuted", "no") if "cheese" in c else ("supported", "ok")
+
+    score = credibility(factcheck(text, verify=verify))
+    assert 0.0 < score < 1.0
+
+
+def test_credibility_no_claims_is_neutral():
+    assert credibility([]) == 0.5
