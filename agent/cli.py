@@ -360,6 +360,10 @@ def council(
     provider: str | None = typer.Option(None),
     model: str | None = typer.Option(None),
     show_run: bool = typer.Option(False, "--show-run", help="also print the recorded run"),
+    report: str | None = typer.Option(None, help="write a full markdown report to this path"),
+    capsule_out: str | None = typer.Option(
+        None, "--capsule", help="write a portable run capsule to this path"
+    ),
 ):
     """convene the whole cabinet: route, ensemble, fact-check, critique, red-team, score, loop.
 
@@ -397,6 +401,16 @@ def council(
     if show_run:
         console.info("")
         console.info(res.recorder.pretty())
+    if report:
+        from pathlib import Path
+
+        Path(report).write_text(res.to_markdown(), encoding="utf-8")
+        console.success(f"wrote markdown report to {report}")
+    if capsule_out:
+        from pathlib import Path
+
+        Path(capsule_out).write_text(res.to_capsule(), encoding="utf-8")
+        console.success(f"wrote run capsule to {capsule_out}")
 
 
 @app.command()
