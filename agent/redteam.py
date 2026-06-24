@@ -8,17 +8,24 @@ the responder is injectable, so the attack battery and bookkeeping test offline.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-# the standard battery. each is a lens an adversary would use on any claim.
-ATTACKS = [
-    "Find a concrete counterexample that breaks this answer.",
-    "What hidden assumption does this answer depend on?",
-    "Where does this answer fail at the edge cases or extremes?",
-    "Is there a more recent fact that would change this answer?",
-    "Could the cited reasoning be a correlation mistaken for causation?",
-    "What would a domain expert say is oversimplified here?",
+# the catalog: each attack has a category and a severity (how damaging if the answer fails it).
+ATTACK_CATALOG = [
+    ("factual", 1.0, "Find a concrete counterexample that breaks this answer."),
+    ("logical", 0.8, "What hidden assumption does this answer depend on?"),
+    ("coverage", 0.6, "Where does this answer fail at the edge cases or extremes?"),
+    ("recency", 0.7, "Is there a more recent fact that would change this answer?"),
+    ("causal", 0.8, "Could the cited reasoning be a correlation mistaken for causation?"),
+    ("depth", 0.5, "What would a domain expert say is oversimplified here?"),
+    ("bias", 0.6, "What perspective or stakeholder does this answer quietly ignore?"),
 ]
+
+# kept for backwards compatibility: the plain list of attack strings.
+ATTACKS = [text for _cat, _sev, text in ATTACK_CATALOG]
+
+_SEVERITY = {text: sev for _cat, sev, text in ATTACK_CATALOG}
+_CATEGORY = {text: cat for cat, _sev, text in ATTACK_CATALOG}
 
 
 @dataclass
@@ -26,26 +33,48 @@ class Probe:
     attack: str
     holds: bool
     reply: str = ""
+    category: str = "general"
+    severity: float = 0.5
 
 
 @dataclass
 class RedTeamResult:
     answer: str
-    probes: list[Probe]
+    probes: list[Probe] = field(default_factory=list)
 
     @property
     def weaknesses(self) -> list[Probe]:
-        return [p for p in self.probes if not p.holds]
+        # most damaging first
+        return sorted(
+            (p for p in self.probes if not p.holds), key=lambda p: p.severity, reverse=True
+        )
 
     @property
     def survived(self) -> bool:
         return not self.weaknesses
 
+    @property
+    def robustness(self) -> float:
+        """0..1: severity-weighted fraction of attacks the answer held against."""
+        if not self.probes:
+            return 1.0
+        total = sum(p.severity for p in self.probes) or 1.0
+        held = sum(p.severity for p in self.probes if p.holds)
+        return round(held / total, 3)
+
+    def by_category(self) -> dict[str, bool]:
+        """did the answer survive every attack in each category?"""
+        out: dict[str, bool] = {}
+        for p in self.probes:
+            out[p.category] = out.get(p.category, True) and p.holds
+        return out
+
     def pretty(self) -> str:
-        lines = [f"red team: {'SURVIVED' if self.survived else 'FOUND WEAKNESSES'}"]
+        head = "SURVIVED" if self.survived else "FOUND WEAKNESSES"
+        lines = [f"red team: {head} (robustness {self.robustness:.2f})"]
         for p in self.probes:
             mark = "✓" if p.holds else "✗"
-            lines.append(f"  {mark} {p.attack}")
+            lines.append(f"  {mark} [{p.category} {p.severity:.1f}] {p.attack}")
             if not p.holds and p.reply:
                 lines.append(f"      ↳ {p.reply}")
         return "\n".join(lines)
@@ -76,5 +105,13 @@ def redteam(
     probes = []
     for attack in attacks:
         holds, reply = respond(answer, attack)
-        probes.append(Probe(attack=attack, holds=bool(holds), reply=reply))
+        probes.append(
+            Probe(
+                attack=attack,
+                holds=bool(holds),
+                reply=reply,
+                category=_CATEGORY.get(attack, "general"),
+                severity=_SEVERITY.get(attack, 0.5),
+            )
+        )
     return RedTeamResult(answer=answer, probes=probes)
