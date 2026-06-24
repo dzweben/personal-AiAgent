@@ -345,6 +345,62 @@ def oracle(
         console.info(f"  🔮 {line}")
 
 
+@app.command()
+def capsule(
+    path: str = typer.Argument(..., help="a json file to pack, or a capsule string to unpack"),
+    decode: bool = typer.Option(False, help="decode a capsule back into json instead of encoding"),
+    qr: str | None = typer.Option(None, help="also write the capsule as a qr png to this path"),
+):
+    """pack a json result into a tiny portable capsule string (or --decode one back)."""
+    import json
+    from pathlib import Path
+
+    from agent.capsule import CapsuleError, encode, to_qr
+    from agent.capsule import decode as _decode
+
+    try:
+        if decode:
+            text = Path(path).read_text() if Path(path).exists() else path
+            obj = _decode(text.strip())
+            out = json.dumps(obj, indent=2)
+            console.markdown(f"```json\n{out}\n```") if console.console() else print(out)
+        else:
+            obj = json.loads(Path(path).read_text())
+            cap = encode(obj)
+            console.success(cap)
+            if qr:
+                to_qr(cap, qr)
+                console.info(f"wrote qr to {qr}")
+    except (CapsuleError, FileNotFoundError, json.JSONDecodeError) as exc:
+        console.error(str(exc))
+        raise typer.Exit(code=1) from exc
+    except RuntimeError as exc:  # qr extra missing
+        console.error(str(exc))
+        raise typer.Exit(code=1) from exc
+
+
+@app.command(name="mcp")
+def mcp(
+    list_only: bool = typer.Option(False, "--list", help="just print the tool definitions"),
+):
+    """serve the whole tool belt over the Model Context Protocol (needs `pip install mcp`)."""
+    from agent.mcp_server import to_mcp_tools
+
+    if list_only:
+        for d in to_mcp_tools():
+            console.info(f"- {d['name']}: {d['description'][:70]}")
+        return
+    try:
+        from agent.mcp_server import run
+
+        console.banner("aiagent mcp")
+        console.info("serving tools over MCP on stdio... (ctrl-c to stop)")
+        run()
+    except RuntimeError as exc:
+        console.error(str(exc))
+        raise typer.Exit(code=1) from exc
+
+
 @app.command(name="config")
 def show_config(config: str | None = typer.Option(None)):
     """print the resolved settings so you can see what the agent will actually do."""
