@@ -215,26 +215,40 @@ def list_plugins():
 @app.command()
 def forge(
     name: str = typer.Option(..., help="what to call the new tool"),
-    desc: str = typer.Option(..., help="one-line description the agent will read"),
-    expr: str = typer.Option(
-        ...,
+    desc: str = typer.Option(..., help="description, or the intent to hand the model with --llm"),
+    expr: str | None = typer.Option(
+        None,
         help="python expression for the body, with `x` as the input string, "
-        'e.g. "float(x) * 2" or "x[::-1]"',
+        'e.g. "float(x) * 2". omit when using --llm.',
     ),
+    llm: bool = typer.Option(False, help="let the model write the expression from --desc"),
+    provider: str | None = typer.Option(None, help="provider to use when --llm is set"),
+    model: str | None = typer.Option(None),
     overwrite: bool = typer.Option(False, help="replace an existing tool of the same name"),
 ):
     """grow the agent a brand new tool at runtime and hot-load it into the belt.
 
     the expression is sandbox-checked (allowlisted imports only, no os/sys/eval/open/...) before
-    anything is written or imported. example:
+    anything is written or imported, whether you wrote it or the model did. examples:
 
         aiagent forge --name double --desc "doubles a number" --expr "float(x) * 2"
+        aiagent forge --name slugify --desc "make text url-safe" --llm
     """
     from agent.forge import SafetyError
     from agent.forge import forge as _forge
 
     try:
-        path = _forge(name, desc, expr, overwrite=overwrite)
+        if llm:
+            from agent.forge import forge_from_intent
+
+            settings = _settings(provider, model, None, False, None)
+            path, written = forge_from_intent(name, desc, settings=settings, overwrite=overwrite)
+            console.info(f"the model wrote: {written}")
+        else:
+            if not expr:
+                console.error("pass --expr, or use --llm to have the model write it")
+                raise typer.Exit(code=1)
+            path = _forge(name, desc, expr, overwrite=overwrite)
     except SafetyError as exc:
         console.error(f"refused to forge: {exc}")
         raise typer.Exit(code=1) from exc
@@ -243,6 +257,92 @@ def forge(
         raise typer.Exit(code=1) from exc
     console.success(f"forged {name!r} -> {path}")
     console.info("it's live now; run `aiagent tools` to see it in the belt.")
+
+
+@app.command()
+def debate(
+    question: str = typer.Argument(..., help="the question to argue out"),
+    rounds: int = typer.Option(2, help="how many back-and-forth rounds"),
+    sides: str = typer.Option("optimist,skeptic", help="two comma-separated stances"),
+    provider: str | None = typer.Option(None),
+    model: str | None = typer.Option(None),
+):
+    """make two voices argue a question, then a moderator synthesises. (needs an api key)"""
+    from agent.debate import run_debate
+
+    settings = _settings(provider, model, None, False, None)
+    a, _, b = sides.partition(",")
+    res = run_debate(
+        question, speakers=(a.strip(), b.strip() or "skeptic"), rounds=rounds, settings=settings
+    )
+    console.markdown(res.pretty()) if console.console() else print(res.pretty())
+
+
+@app.command()
+def swarm(
+    task: str = typer.Argument(..., help="what the team should work on"),
+    roles: str = typer.Option("researcher,critic,synthesizer", help="comma-separated roles"),
+    rounds: int = typer.Option(1, help="how many passes over the blackboard"),
+    provider: str | None = typer.Option(None),
+    model: str | None = typer.Option(None),
+):
+    """run a little society of role-playing agents over a shared blackboard. (needs an api key)"""
+    from agent.swarm import run_swarm
+
+    settings = _settings(provider, model, None, False, None)
+    res = run_swarm(
+        task, roles=[r.strip() for r in roles.split(",")], rounds=rounds, settings=settings
+    )
+    console.markdown(res.pretty()) if console.console() else print(res.pretty())
+
+
+@app.command()
+def evolve(
+    generations: int = typer.Option(12, help="how many generations to run"),
+    pop: int = typer.Option(16, help="population size"),
+    seed: int = typer.Option(0, help="rng seed for reproducibility"),
+):
+    """evolve a system prompt with a genetic algorithm (offline heuristic fitness)."""
+    from agent.evolve import evolve as _evolve
+
+    res = _evolve(generations=generations, pop_size=pop, seed=seed)
+    console.info(f"best fitness: {res.best_fitness:.2f} (from {res.history[0]:.2f})")
+    console.success("evolved prompt:")
+    console.markdown(f"> {res.prompt()}") if console.console() else print(res.prompt())
+
+
+@app.command()
+def dream(
+    n: int = typer.Option(5, help="how many dreams to generate"),
+    seed: int = typer.Option(0),
+    session: str = typer.Option("default"),
+    config: str | None = typer.Option(None),
+):
+    """free-associate over your conversation memory into surreal research prompts."""
+    from agent.dream import dream_from_memory
+    from agent.memory import ConversationMemory
+
+    settings = load_settings(config_path=config)
+    mem = ConversationMemory(path=settings.memory.path, session=session)
+    dreams = dream_from_memory(mem, n=n, seed=seed)
+    if not dreams:
+        console.info("not enough memory to dream on yet; go have some conversations first.")
+        return
+    for d in dreams:
+        console.info(f"  💭 {d}")
+
+
+@app.command()
+def oracle(
+    query: str = typer.Argument(..., help="the question you're stuck on"),
+    n: int = typer.Option(3, help="how many cards to draw"),
+    seed: int = typer.Option(0),
+):
+    """draw oblique-strategy cards to reframe a question from weird angles."""
+    from agent.oracle import draw
+
+    for line in draw(query, n=n, seed=seed):
+        console.info(f"  🔮 {line}")
 
 
 @app.command(name="config")

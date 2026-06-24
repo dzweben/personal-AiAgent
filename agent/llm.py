@@ -83,6 +83,26 @@ def build_llm(settings: Settings, streaming: bool | None = None):
 LOCAL_PROVIDERS = frozenset({"ollama", "local"})
 
 
+def complete(prompt: str, settings: Settings | None = None, system: str | None = None) -> str:
+    """one-shot text completion. build the chat model, send a message, return the text.
+
+    a lot of the wilder features (forge --llm, debate, critique, swarm) just need "give the
+    model a string, get a string back", so this is the small shared door they all knock on.
+    """
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    from agent.config import load_settings
+
+    settings = settings or load_settings()
+    llm = build_llm(settings, streaming=False)
+    messages: list = []
+    if system:
+        messages.append(SystemMessage(content=system))
+    messages.append(HumanMessage(content=prompt))
+    resp = llm.invoke(messages)
+    return getattr(resp, "content", str(resp))
+
+
 def default_model_for(provider: str) -> str:
     """a reasonable default model name per provider, used when none is given."""
     return {

@@ -177,3 +177,57 @@ def forge(
     if slug not in available_tool_names():
         raise RuntimeError(f"forged {slug!r} but it did not register; check the generated source")
     return target
+
+
+_FENCE_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)```", re.DOTALL)
+
+_DRAFT_SYSTEM = (
+    "You write the body of a tiny Python tool. The user describes what it should do. "
+    "Reply with ONLY a single Python expression (no statements, no imports, no code fences) "
+    "that computes the result from a variable `x` (a string the caller passes in). "
+    "You may use these modules without importing them: math, random, datetime, json, re, "
+    "statistics, textwrap, string. You may NOT use os, sys, subprocess, eval, exec, open, "
+    "__import__, or any dunder attribute. Example reply for 'double a number': float(x) * 2"
+)
+
+
+def draft_expr(intent: str, complete=None, settings=None) -> str:
+    """ask an llm to write a safe one-line expression for the given intent.
+
+    `complete` is injectable (a callable taking a prompt) so this is testable without a live
+    model; by default it routes through agent.llm.complete. the result is still validated by
+    forge() before anything runs, so a misbehaving model can't get unsafe code past the gate.
+    """
+    if complete is None:
+        from agent.llm import complete as _default_complete
+
+        def complete(prompt: str) -> str:  # noqa: A001 - shadow on purpose, local default
+            return _default_complete(prompt, settings=settings, system=_DRAFT_SYSTEM)
+
+    raw = complete(f"Write the tool body for: {intent}")
+    # if the model fenced its answer, take what's inside the fence; otherwise use the whole reply
+    fenced = _FENCE_BLOCK_RE.search(raw)
+    candidate = fenced.group(1) if fenced else raw
+    # collapse to the first non-empty line; the model sometimes adds a trailing comment
+    expr = next((ln.strip() for ln in candidate.splitlines() if ln.strip()), "")
+    if not expr:
+        raise SafetyError("the model returned an empty expression")
+    return expr
+
+
+def forge_from_intent(
+    name: str,
+    intent: str,
+    *,
+    complete=None,
+    settings=None,
+    directory: Path | None = None,
+    overwrite: bool = False,
+) -> tuple[Path, str]:
+    """let the model dream up the expression from a plain-english intent, then forge it.
+
+    returns (path, expr) so callers can show what the model actually wrote.
+    """
+    expr = draft_expr(intent, complete=complete, settings=settings)
+    path = forge(name, intent, expr, directory=directory, overwrite=overwrite)
+    return path, expr
