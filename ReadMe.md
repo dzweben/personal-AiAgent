@@ -47,7 +47,10 @@ an answer, then hands you back a clean structured result and can save it whereve
   - `langchain-openai` -> access to OpenAI's GPT models.
   - `langchain-anthropic` -> access to Anthropic's models.
   - `langchain-community` -> DuckDuckGo + Wikipedia integrations.
-  - optional `groq` and `google` providers too, since they were basically free to add.
+  - optional `groq`, `google`, `mistral` and `cohere` providers, plus `ollama` for
+    fully local models with no api key, since they were basically free to add.
+- A **plugin loader**: drop a `.py` file in `plugins/` (or ship an `aiagent.tools`
+  entry point) and your own tools join the belt automatically — see `plugins/example_tool.py`.
 - A **Pydantic schema** enforces structured outputs (topic, summary, sources, tools used).
 - A whole **tool belt** the agent can reach for (see below).
 - **Conversation memory** backed by SQLite, so it can remember earlier turns in a chat.
@@ -188,7 +191,8 @@ personal-aiagent/
 ├── agent/                  # the actual package
 │   ├── config.py           # settings (defaults -> yaml -> env -> flags)
 │   ├── models.py           # pydantic schemas, including the original ResearchResponse
-│   ├── llm.py              # provider factory (openai / anthropic / groq / google)
+│   ├── llm.py              # provider factory (openai/anthropic/groq/google/ollama/mistral/cohere)
+│   ├── plugins.py          # discovers third-party tools from plugins/ + entry points
 │   ├── prompts.py          # system prompts
 │   ├── agent.py            # the ResearchAgent orchestrator
 │   ├── memory.py           # sqlite conversation memory

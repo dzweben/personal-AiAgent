@@ -44,6 +44,13 @@ rag = ["chromadb", "faiss-cpu", "sentence-transformers", "tiktoken"]
 server = ["fastapi", "uvicorn[standard]", "sse-starlette"]
 tools = ["arxiv", "wolframalpha", "numexpr", "pandas", "matplotlib"]
 export = ["markdown", "reportlab", "weasyprint", "jinja2"]
+providers = [
+    "langchain-groq",
+    "langchain-google-genai",
+    "langchain-ollama",
+    "langchain-mistralai",
+    "langchain-cohere",
+]
 dev = [
     "pytest>=8",
     "pytest-cov",
@@ -55,7 +62,7 @@ dev = [
     "types-PyYAML",
 ]
 all = [
-    "personal-aiagent[rag,server,tools,export,dev]",
+    "personal-aiagent[rag,server,tools,export,providers,dev]",
 ]
 
 [project.urls]

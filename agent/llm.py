@@ -2,10 +2,13 @@
 
 picks the right chat model based on the provider in settings. openai and anthropic were
 in the original project, i added groq and google as optional extras since they use the
-same langchain interface and it was basically free to support them.
+same langchain interface and it was basically free to support them. ollama, mistral and
+cohere came later in the same spirit -- one more elif and you get another backend.
 """
 
 from __future__ import annotations
+
+import os
 
 from agent.config import Settings
 from agent.logging_utils import get_logger
@@ -45,7 +48,39 @@ def build_llm(settings: Settings, streaming: bool | None = None):
             ) from exc
         return ChatGoogleGenerativeAI(model=settings.model, temperature=settings.temperature)
 
-    raise ValueError(f"unknown provider {provider!r}. try openai, anthropic, groq, or google.")
+    if provider in ("ollama", "local"):
+        # runs against a local ollama daemon, so no api key and no cloud round trip.
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError("pip install langchain-ollama to use the ollama provider") from exc
+        base_url = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        return ChatOllama(model=settings.model, temperature=settings.temperature, base_url=base_url)
+
+    if provider == "mistral":
+        try:
+            from langchain_mistralai import ChatMistralAI
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "pip install langchain-mistralai to use the mistral provider"
+            ) from exc
+        return ChatMistralAI(model=settings.model, max_tokens=settings.max_tokens, **common)
+
+    if provider == "cohere":
+        try:
+            from langchain_cohere import ChatCohere
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError("pip install langchain-cohere to use the cohere provider") from exc
+        return ChatCohere(model=settings.model, temperature=settings.temperature)
+
+    raise ValueError(
+        f"unknown provider {provider!r}. try openai, anthropic, groq, google, "
+        "ollama, mistral, or cohere."
+    )
+
+
+# providers that don't need a hosted api key to talk to (handy for the cli to hint about).
+LOCAL_PROVIDERS = frozenset({"ollama", "local"})
 
 
 def default_model_for(provider: str) -> str:
@@ -55,4 +90,8 @@ def default_model_for(provider: str) -> str:
         "anthropic": "claude-3-5-sonnet-latest",
         "groq": "llama-3.1-70b-versatile",
         "google": "gemini-1.5-pro",
+        "ollama": "llama3.1",
+        "local": "llama3.1",
+        "mistral": "mistral-large-latest",
+        "cohere": "command-r-plus",
     }.get(provider.lower(), "gpt-4o")

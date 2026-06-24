@@ -7,6 +7,10 @@ semantic versioning.
 ## [Unreleased]
 
 ### Added
+- three more llm providers: ollama (local, no api key), mistral, and cohere
+- a plugin loader: drop `.py` files in `plugins/` (or ship `aiagent.tools` entry
+  points) to register extra tools without touching the package
+- richer session admin in memory + cli: `stats`, `rename`, and `delete`
 - proper `agent` package: config, logging, memory, cache, prompts, llm factory
 - a real tool belt: search, wikipedia, arxiv, calculator, sandboxed python repl,
   datetime, http_get, fetch_url, file read/write/list, news, weather

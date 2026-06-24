@@ -37,7 +37,9 @@ def _settings(provider, model, temperature, verbose, config):
 @app.command()
 def research(
     query: str = typer.Argument(..., help="what do you want me to look into?"),
-    provider: str | None = typer.Option(None, help="openai | anthropic | groq | google"),
+    provider: str | None = typer.Option(
+        None, help="openai | anthropic | groq | google | ollama | mistral | cohere"
+    ),
     model: str | None = typer.Option(None, help="override the model name"),
     temperature: float | None = typer.Option(None, help="0 is focused, 1 is loose"),
     detailed: bool = typer.Option(False, help="use the more careful, source heavy prompt"),
@@ -156,11 +158,12 @@ def cost(
 
 @app.command()
 def memory(
-    action: str = typer.Argument("show", help="show | clear | sessions"),
+    action: str = typer.Argument("show", help="show | clear | sessions | stats | rename | delete"),
     session: str = typer.Option("default"),
+    to: str | None = typer.Option(None, "--to", help="new name when action is rename"),
     config: str | None = typer.Option(None),
 ):
-    """inspect or wipe the conversation memory."""
+    """inspect, organise, or wipe the conversation memory."""
     from agent.memory import ConversationMemory
 
     settings = load_settings(config_path=config)
@@ -170,6 +173,23 @@ def memory(
         console.success(f"cleared session {session!r}")
     elif action == "sessions":
         console.info("sessions: " + (", ".join(mem.sessions()) or "(none)"))
+    elif action == "stats":
+        rows = mem.session_stats()
+        if not rows:
+            console.info("no sessions yet")
+        for row in rows:
+            console.info(
+                f"- {row['session']}: {row['turns']} turns, last active {row['last_active']}"
+            )
+    elif action == "rename":
+        if not to:
+            console.error("rename needs --to <new-name>")
+            raise typer.Exit(code=1)
+        moved = mem.rename_session(session, to)
+        console.success(f"renamed {session!r} -> {to!r} ({moved} turns)")
+    elif action == "delete":
+        removed = mem.delete_session(session)
+        console.success(f"deleted session {session!r} ({removed} turns)")
     else:
         for role, content in mem.history():
             (
@@ -177,6 +197,19 @@ def memory(
                 if console.console()
                 else print(role, content[:300])
             )
+
+
+@app.command(name="plugins")
+def list_plugins():
+    """discover and list any third-party tool plugins on this machine."""
+    from agent.plugins import load_plugins, plugin_dir
+
+    loaded = load_plugins()
+    console.info(f"plugin dir: {plugin_dir()}")
+    if loaded:
+        console.success("loaded plugins: " + ", ".join(loaded))
+    else:
+        console.info("no plugins found (drop .py files in the plugin dir to add some)")
 
 
 @app.command(name="config")
