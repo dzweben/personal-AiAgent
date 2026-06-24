@@ -5,15 +5,17 @@ convene() runs a question through the works:
     route -> ensemble (several personas answer) -> fact-check the merged draft
           -> constitutional critique + rewrite -> adversarial red-team -> score it
 
-every move is recorded (agent.replay) so the run is inspectable and shareable, and an optional
-budget guard keeps the whole thing from running away. all the model-touching parts come from a
-single injectable `complete(prompt) -> str`, so the entire chain is testable offline with one
-fake function.
+and then, if you ask it to, it *loops*: as long as the score is under your target or the red
+team found a weak spot, it feeds those weaknesses (plus any unsupported claims) back into a
+reviser and re-evaluates, until it clears the bar or runs out of iterations. every move is
+recorded (agent.replay) so the run is inspectable and shareable, and an optional budget guard
+keeps the whole thing from running away. all the model-touching parts come from a single
+injectable `complete(prompt) -> str`, so the entire chain is testable offline with one fake.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from agent.critique import refine
 from agent.ensemble import ensemble
@@ -34,18 +36,22 @@ class CouncilResult:
     redteam_survived: bool
     weaknesses: list
     recorder: Recorder
+    iterations: int = 1
+    score_history: list[float] = field(default_factory=list)
 
     def pretty(self) -> str:
         verdicts = summarize_verdicts(self.claims)
+        survived = "survived" if self.redteam_survived else f"{len(self.weaknesses)} weak spots"
+        trail = " → ".join(f"{s:.2f}" for s in self.score_history)
         lines = [
             f"Q: {self.question}",
-            f"route: {self.mode}",
+            f"route: {self.mode}   iterations: {self.iterations}",
             "",
             self.answer,
             "",
             f"claims: {verdicts}",
-            f"red team: {'survived' if self.redteam_survived else f'{len(self.weaknesses)} weak spots'}",
-            self.scorecard.pretty(),
+            f"red team: {survived}",
+            f"{self.scorecard.pretty()}   (history: {trail})",
         ]
         return "\n".join(lines)
 
@@ -77,6 +83,26 @@ def _components_from_complete(complete):
     return answer, verify, judge, revise, respond
 
 
+def _evaluate(answer, verify_fn, respond_fn, settings):
+    """run the judgement stages on an answer: fact-check, red-team, score."""
+    checks = factcheck(answer, verify=verify_fn, settings=settings)
+    rt = redteam(answer, respond=respond_fn, settings=settings)
+    supported = summarize_verdicts(checks).get("supported", 0)
+    sc = score(answer, n_sources=supported)
+    return checks, rt, sc
+
+
+def _feedback(checks, rt) -> list[str]:
+    """collect concrete fixes from red-team weaknesses and non-supported claims."""
+    issues = [f"address this weakness: {p.attack} ({p.reply})" for p in rt.weaknesses]
+    issues += [
+        f"this claim is {c.verdict}, fix or qualify it: {c.claim}"
+        for c in checks
+        if c.verdict != "supported"
+    ]
+    return issues
+
+
 def convene(
     question: str,
     complete=None,
@@ -84,18 +110,28 @@ def convene(
     refine_rounds: int = 2,
     settings=None,
     budget=None,
+    target_score: float = 0.0,
+    max_iterations: int = 1,
 ) -> CouncilResult:
-    """run the full council pipeline and return a graded, fact-checked, hardened answer."""
+    """run the council pipeline, optionally looping until the score clears `target_score`.
+
+    with the defaults (target_score=0.0, max_iterations=1) it's a single pass. raise either to
+    turn on the self-correction loop.
+    """
     rec = Recorder(title=f"council: {question}")
 
     r = route(question)
     rec.record("route", f"{r.mode} — {r.reason}", mode=r.mode)
 
-    # wire the model-touching callables (from an injected complete, or each module's llm default)
     if complete is not None:
         answer_fn, verify_fn, judge_fn, revise_fn, respond_fn = _components_from_complete(complete)
     else:
         answer_fn = verify_fn = judge_fn = revise_fn = respond_fn = None
+    # a reviser is needed for the self-correction loop even on the live-llm path
+    if revise_fn is None:
+        from agent.critique import _default_reviser
+
+        revise_fn = _default_reviser(settings)
 
     if budget is not None and not budget.guard(question):
         rec.record("budget", "no headroom; returning early")
@@ -123,6 +159,24 @@ def convene(
     supported = summarize_verdicts(checks).get("supported", 0)
     sc = score(answer, n_sources=supported)
     rec.record("score", sc.pretty(), overall=sc.overall)
+    history = [sc.overall]
+
+    # the self-correction loop: keep going while we're short of target or the red team bit
+    iteration = 1
+    while iteration < max_iterations and (sc.overall < target_score or not rt.survived):
+        issues = _feedback(checks, rt)
+        if not issues:
+            break
+        answer = revise_fn(answer, issues).strip()
+        rec.record("revise", f"addressed {len(issues)} issue(s)", iteration=iteration + 1)
+        checks, rt, sc = _evaluate(answer, verify_fn, respond_fn, settings)
+        rec.record(
+            "recheck",
+            f"{summarize_verdicts(checks)} | {'survived' if rt.survived else 'weak'} | {sc.pretty()}",
+            overall=sc.overall,
+        )
+        history.append(sc.overall)
+        iteration += 1
 
     return CouncilResult(
         question=question,
@@ -133,4 +187,6 @@ def convene(
         redteam_survived=rt.survived,
         weaknesses=rt.weaknesses,
         recorder=rec,
+        iterations=iteration,
+        score_history=history,
     )
