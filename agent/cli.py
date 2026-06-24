@@ -346,6 +346,48 @@ def oracle(
 
 
 @app.command()
+def council(
+    question: str = typer.Argument(..., help="the question to put to the council"),
+    personas: str = typer.Option("researcher,skeptic,eli5", help="comma-separated personas"),
+    rounds: int = typer.Option(2, help="max critique/revision rounds"),
+    provider: str | None = typer.Option(None),
+    model: str | None = typer.Option(None),
+    show_run: bool = typer.Option(False, "--show-run", help="also print the recorded run"),
+):
+    """convene the whole cabinet: route, ensemble, fact-check, critique, red-team, score. (needs a key)"""
+    from agent.council import convene
+
+    settings = _settings(provider, model, None, False, None)
+    res = convene(
+        question,
+        personas=[p.strip() for p in personas.split(",")],
+        refine_rounds=rounds,
+        settings=settings,
+    )
+    console.markdown(res.pretty()) if console.console() else print(res.pretty())
+    if show_run:
+        console.info("")
+        console.info(res.recorder.pretty())
+
+
+@app.command()
+def route(query: str = typer.Argument(..., help="the query to classify")):
+    """show which mode the router would pick for a query (offline, instant)."""
+    from agent.router import route as _route
+
+    r = _route(query)
+    console.info(f"mode: {r.mode}  ({r.reason})")
+
+
+@app.command(name="score")
+def score_cmd(text: str = typer.Argument(..., help="an answer to grade")):
+    """grade an answer with the offline heuristic scorecard."""
+    from agent.scorecard import score as _score
+
+    console.info(_score(text).pretty())
+
+
+@app.command()
 def capsule(
     path: str = typer.Argument(..., help="a json file to pack, or a capsule string to unpack"),
     decode: bool = typer.Option(False, help="decode a capsule back into json instead of encoding"),
