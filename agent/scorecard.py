@@ -42,6 +42,10 @@ def _sentences(text: str) -> list[str]:
 def score(answer: str, n_sources: int = 0) -> Scorecard:
     """grade an answer on a few axes and return a blended 0..1 score."""
     text = answer.strip()
+    if not text:
+        # nothing to grade -- don't let empty defaults (no hedges, no long sentences) inflate it
+        parts = dict.fromkeys(("length", "sourcing", "hedging", "readability", "concreteness"), 0.0)
+        return Scorecard(overall=0.0, parts=parts)
     words = re.findall(r"\w+", text)
     n_words = len(words)
     sentences = _sentences(text)
