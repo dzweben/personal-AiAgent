@@ -7,6 +7,20 @@ semantic versioning.
 ## [Unreleased]
 
 ### Added
+- the **council** (`agent/council.py` + `aiagent council`): one chained pipeline that routes a
+  question, gathers a multi-persona ensemble answer, fact-checks the claims, runs a
+  constitutional critique + rewrite, red-teams the result, and scores it — recording every move
+- the reasoning building blocks the council chains together, each its own module + cli where it
+  fits and each testable offline via injectable callables:
+  - `pipeline`: a composable Context + Step backbone
+  - `router` (`aiagent route`): heuristic query → mode classifier
+  - `scorecard` (`aiagent score`): offline answer-quality heuristic
+  - `summarize`: map-reduce summariser for oversized context
+  - `ensemble`: multi-persona answers reconciled by a consensus vote
+  - `factcheck`: claim extraction + per-claim verification
+  - `redteam`: an adversarial battery that tries to break an answer
+  - `budget`: a cost ceiling guard across a chained run
+  - `replay`: a run recorder that serialises (and capsule-packs) a whole run
 - a whole **chaos cabinet** of experimental modules + cli commands:
   - `forge --llm`: the model writes the tool's body from plain-english intent (still sandboxed)
   - `debate`: two stances argue a question, a moderator synthesises
