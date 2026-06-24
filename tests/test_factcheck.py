@@ -36,5 +36,7 @@ def test_factcheck_applies_verifier_and_tallies():
 
 
 def test_factcheck_coerces_unknown_verdicts_to_unclear():
-    checks = factcheck("Cats have whiskers everywhere on their bodies.", verify=lambda c: ("???", ""))
+    checks = factcheck(
+        "Cats have whiskers everywhere on their bodies.", verify=lambda c: ("???", "")
+    )
     assert checks[0].verdict == "unclear"
