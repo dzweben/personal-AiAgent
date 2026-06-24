@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 
 from agent.critique import refine
 from agent.ensemble import ensemble
-from agent.factcheck import VERDICTS, factcheck, summarize_verdicts
+from agent.factcheck import VERDICTS, credibility, factcheck, summarize_verdicts
 from agent.redteam import redteam
 from agent.replay import Recorder
 from agent.router import route
@@ -38,6 +38,15 @@ class CouncilResult:
     recorder: Recorder
     iterations: int = 1
     score_history: list[float] = field(default_factory=list)
+    robustness: float = 1.0
+
+    @property
+    def confidence(self) -> float:
+        """one 0..1 number blending answer quality, claim credibility, and robustness."""
+        blend = (
+            0.4 * self.scorecard.overall + 0.3 * credibility(self.claims) + 0.3 * self.robustness
+        )
+        return round(blend, 3)
 
     def pretty(self) -> str:
         verdicts = summarize_verdicts(self.claims)
@@ -45,15 +54,43 @@ class CouncilResult:
         trail = " → ".join(f"{s:.2f}" for s in self.score_history)
         lines = [
             f"Q: {self.question}",
-            f"route: {self.mode}   iterations: {self.iterations}",
+            f"route: {self.mode}   iterations: {self.iterations}   confidence: {self.confidence:.2f}",
             "",
             self.answer,
             "",
-            f"claims: {verdicts}",
-            f"red team: {survived}",
+            f"claims: {verdicts}  (credibility {credibility(self.claims):.2f})",
+            f"red team: {survived}  (robustness {self.robustness:.2f})",
             f"{self.scorecard.pretty()}   (history: {trail})",
         ]
         return "\n".join(lines)
+
+    def to_markdown(self) -> str:
+        """a full, shareable report of the run."""
+        lines = [
+            "# Council report\n",
+            f"**Question:** {self.question}  ",
+            f"**Route:** {self.mode}  **Iterations:** {self.iterations}  "
+            f"**Confidence:** {self.confidence:.2f}\n",
+            "## Answer\n",
+            self.answer,
+            "\n## Claims checked\n",
+        ]
+        for c in self.claims:
+            lines.append(f"- _{c.verdict}_ (importance {c.importance:.2f}): {c.claim}")
+        if not self.claims:
+            lines.append("- (no checkable claims found)")
+        lines.append("\n## Red team\n")
+        survived = "survived all probes" if self.redteam_survived else "found weak spots:"
+        lines.append(f"Robustness {self.robustness:.2f} — {survived}")
+        for w in self.weaknesses:
+            lines.append(f"- **[{w.category}]** {w.attack}")
+        lines.append("\n## Run\n")
+        lines.append("```\n" + self.recorder.pretty() + "\n```")
+        return "\n".join(lines)
+
+    def to_capsule(self) -> str:
+        """pack the recorded run into a portable capsule string."""
+        return self.recorder.to_capsule()
 
 
 def _components_from_complete(complete):
@@ -189,4 +226,5 @@ def convene(
         recorder=rec,
         iterations=iteration,
         score_history=history,
+        robustness=rt.robustness,
     )
