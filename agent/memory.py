@@ -84,3 +84,27 @@ class ConversationMemory:
         with self._conn() as conn:
             rows = conn.execute("SELECT DISTINCT session FROM turns ORDER BY session").fetchall()
         return [r[0] for r in rows]
+
+    def session_stats(self) -> list[dict]:
+        """one row per session: name, turn count, and when it was last touched.
+
+        ordered most-recently-active first, which is how i actually want to scan them.
+        """
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT session, COUNT(*) AS turns, MAX(created_at) AS last "
+                "FROM turns GROUP BY session ORDER BY last DESC"
+            ).fetchall()
+        return [{"session": s, "turns": n, "last_active": last} for s, n, last in rows]
+
+    def rename_session(self, old: str, new: str) -> int:
+        """move every turn from one session name to another. returns rows moved."""
+        with self._conn() as conn:
+            cur = conn.execute("UPDATE turns SET session = ? WHERE session = ?", (new, old))
+            return cur.rowcount
+
+    def delete_session(self, name: str) -> int:
+        """drop a whole session. returns the number of turns removed."""
+        with self._conn() as conn:
+            cur = conn.execute("DELETE FROM turns WHERE session = ?", (name,))
+            return cur.rowcount

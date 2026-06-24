@@ -35,10 +35,11 @@ def _safe(name: str, factory: Callable):
         return []
 
 
-def build_tools(enabled: list[str] | None = None) -> list:
+def build_tools(enabled: list[str] | None = None, *, load_plugins: bool = True) -> list:
     """return the langchain Tool objects the agent should use.
 
     pass a list of names to cherry pick, or leave it None to grab everything that loads.
+    set load_plugins=False to stick to the built-ins and skip third-party discovery.
     """
     # import here so importing the package stays cheap
     from agent.tools import (  # noqa: F401
@@ -62,6 +63,15 @@ def build_tools(enabled: list[str] | None = None) -> list:
             __import__(f"agent.tools.{optional}")
         except Exception:  # noqa: BLE001
             pass
+
+    # let third-party plugins register their own tools before we collect the registry.
+    if load_plugins:
+        try:
+            from agent.plugins import load_plugins as _discover
+
+            _discover()
+        except Exception as exc:  # noqa: BLE001 - plugin discovery is best-effort
+            log.debug("plugin discovery skipped: %s", exc)
 
     names = enabled if enabled is not None else list(_REGISTRY.keys())
     tools: list = []
