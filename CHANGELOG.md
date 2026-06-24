@@ -7,6 +7,10 @@ semantic versioning.
 ## [Unreleased]
 
 ### Added
+- the **toolsmith** (`agent/forge.py` + `aiagent forge`): the agent writes, sandbox-checks,
+  and hot-loads brand new tools for itself at runtime. an ast validator refuses anything
+  outside a tiny allowlist (no os/sys/subprocess/eval/exec/open/dunders) before a line is
+  written or imported, so generated code can't escape the box
 - three more llm providers: ollama (local, no api key), mistral, and cohere
 - a plugin loader: drop `.py` files in `plugins/` (or ship `aiagent.tools` entry
   points) to register extra tools without touching the package

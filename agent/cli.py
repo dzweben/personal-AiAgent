@@ -212,6 +212,39 @@ def list_plugins():
         console.info("no plugins found (drop .py files in the plugin dir to add some)")
 
 
+@app.command()
+def forge(
+    name: str = typer.Option(..., help="what to call the new tool"),
+    desc: str = typer.Option(..., help="one-line description the agent will read"),
+    expr: str = typer.Option(
+        ...,
+        help="python expression for the body, with `x` as the input string, "
+        'e.g. "float(x) * 2" or "x[::-1]"',
+    ),
+    overwrite: bool = typer.Option(False, help="replace an existing tool of the same name"),
+):
+    """grow the agent a brand new tool at runtime and hot-load it into the belt.
+
+    the expression is sandbox-checked (allowlisted imports only, no os/sys/eval/open/...) before
+    anything is written or imported. example:
+
+        aiagent forge --name double --desc "doubles a number" --expr "float(x) * 2"
+    """
+    from agent.forge import SafetyError
+    from agent.forge import forge as _forge
+
+    try:
+        path = _forge(name, desc, expr, overwrite=overwrite)
+    except SafetyError as exc:
+        console.error(f"refused to forge: {exc}")
+        raise typer.Exit(code=1) from exc
+    except (FileExistsError, RuntimeError) as exc:
+        console.error(str(exc))
+        raise typer.Exit(code=1) from exc
+    console.success(f"forged {name!r} -> {path}")
+    console.info("it's live now; run `aiagent tools` to see it in the belt.")
+
+
 @app.command(name="config")
 def show_config(config: str | None = typer.Option(None)):
     """print the resolved settings so you can see what the agent will actually do."""

@@ -136,7 +136,24 @@ aiagent chat --session espresso        # interactive, remembers the conversation
 aiagent tools                          # list every loadable tool
 aiagent config                         # show the resolved settings
 aiagent memory show                    # peek at conversation history
+
+# the unhinged one: grow the agent a brand new tool at runtime
+aiagent forge --name fahrenheit --desc "celsius to fahrenheit" --expr "float(x) * 9/5 + 32"
+aiagent tools                          # ...and fahrenheit is now in the belt
 ```
+
+## The toolsmith (the agent writes its own tools)
+
+`aiagent forge` takes a name, a description, and a one-line python expression (`x` is the
+input), generates a real plugin module, runs it through an AST sandbox, writes it into the
+plugin dir, and hot-loads it — so the new tool is live immediately, no restart.
+
+The sandbox is deliberately paranoid: generated code may only import from a tiny allowlist
+(`math`, `random`, `datetime`, `json`, `re`, `statistics`, `textwrap`, `string`) and may not
+touch `os` / `sys` / `subprocess` / sockets, call `eval` / `exec` / `open` / `__import__`, or
+poke at dunder attributes. Anything outside that raises `SafetyError` *before* a single line
+is written to disk or imported. It is still a toy — don't point it at hostile input — but it
+is a toy with a seatbelt. See `agent/forge.py`.
 
 ## The HTTP API
 
