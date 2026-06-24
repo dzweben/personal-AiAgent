@@ -32,3 +32,21 @@ def test_route_always_returns_a_known_mode():
 
 def test_route_has_a_reason():
     assert route("what is x").reason
+
+
+def test_route_reports_confidence_and_scores():
+    r = route("should we adopt kubernetes?")
+    assert 0.0 < r.confidence <= 1.0
+    assert set(r.scores) == set(MODES)
+    assert r.scores[r.mode] == max(r.scores.values())
+
+
+def test_runner_up_is_second_best():
+    r = route("should we use postgres or mysql?")
+    assert r.mode == "debate"
+    assert r.runner_up in MODES and r.runner_up != "debate"
+
+
+def test_long_what_is_question_is_research_not_define():
+    r = route("what is the long-term economic impact of automation on labor markets")
+    assert r.mode == "research"
