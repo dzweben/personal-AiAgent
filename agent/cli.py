@@ -350,20 +350,49 @@ def council(
     question: str = typer.Argument(..., help="the question to put to the council"),
     personas: str = typer.Option("researcher,skeptic,eli5", help="comma-separated personas"),
     rounds: int = typer.Option(2, help="max critique/revision rounds"),
+    target: float = typer.Option(
+        0.0, help="loop, self-correcting, until the score clears this (0..1); 0 = single pass"
+    ),
+    max_iter: int = typer.Option(1, "--max-iter", help="cap on self-correction iterations"),
+    evolve: bool = typer.Option(
+        False, help="first evolve the best persona line-up against the scorecard"
+    ),
     provider: str | None = typer.Option(None),
     model: str | None = typer.Option(None),
     show_run: bool = typer.Option(False, "--show-run", help="also print the recorded run"),
 ):
-    """convene the whole cabinet: route, ensemble, fact-check, critique, red-team, score. (needs a key)"""
-    from agent.council import convene
+    """convene the whole cabinet: route, ensemble, fact-check, critique, red-team, score, loop.
 
+    needs an api key. raise --target/--max-iter to turn on the self-correction loop, or pass
+    --evolve to let a genetic search pick the persona line-up first.
+    """
     settings = _settings(provider, model, None, False, None)
-    res = convene(
-        question,
-        personas=[p.strip() for p in personas.split(",")],
-        refine_rounds=rounds,
-        settings=settings,
-    )
+    persona_list = [p.strip() for p in personas.split(",")]
+
+    if evolve:
+        from agent.council_evolve import convene_evolved
+
+        console.info("evolving the persona line-up against the scorecard...")
+        res, search = convene_evolved(
+            question,
+            settings=settings,
+            refine_rounds=rounds,
+            target_score=target,
+            max_iterations=max_iter,
+        )
+        console.success(f"evolved line-up: {', '.join(search.personas)} (fit {search.fitness:.2f})")
+    else:
+        from agent.council import convene
+
+        res = convene(
+            question,
+            personas=persona_list,
+            refine_rounds=rounds,
+            target_score=target,
+            max_iterations=max_iter,
+            settings=settings,
+        )
+
     console.markdown(res.pretty()) if console.console() else print(res.pretty())
     if show_run:
         console.info("")
