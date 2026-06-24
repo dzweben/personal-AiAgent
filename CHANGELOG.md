@@ -6,6 +6,22 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+- a big hardening pass over every reasoning idea, each taken closer to its max:
+  - **council** now *self-corrects in a loop* (`--target`/`--max-iter`), feeding red-team
+    weaknesses and unsupported claims back into the reviser; reports an aggregate **confidence**
+    (quality × credibility × robustness); and exports a markdown `--report` or a `--capsule`
+  - **council `--evolve`** tunes the persona line-up with a genetic search against the scorecard
+  - **toolsmith** now forges multi-statement bodies and can `list`/`remove` forged tools safely
+  - **scorecard** gained specificity + structure axes, tunable weights, and `compare()`
+  - **router** scores every mode and reports a confidence + runner-up
+  - **ensemble** added `best` (scorecard) and `longest` merge strategies
+  - **factcheck** added claim importance, dedup, and an importance-weighted credibility score
+  - **redteam** added attack categories, severities, and a weighted robustness score
+  - **debate** went N-party with early-stop convergence detection
+  - **swarm** folds the blackboard into a final lead synthesis
+  - **evolve** got pluggable operators, diversity preservation, and an eval-harness fitness hook
+
 ### Added
 - the **council** (`agent/council.py` + `aiagent council`): one chained pipeline that routes a
   question, gathers a multi-persona ensemble answer, fact-checks the claims, runs a
