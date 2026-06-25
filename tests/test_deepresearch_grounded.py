@@ -74,11 +74,11 @@ def test_experience_remembers_the_run(tmp_path):
 
 
 def test_parallel_and_sequential_agree():
-    kw = dict(
-        propose=_propose,
-        answer=lambda q: f"answer to {q}",
-        synthesize=lambda q, parts: " | ".join(parts.values()),
-    )
+    kw = {
+        "propose": _propose,
+        "answer": lambda q: f"answer to {q}",
+        "synthesize": lambda q, parts: " | ".join(parts.values()),
+    }
     par = deep_research("q", parallel=True, **kw)
     seq = deep_research("q", parallel=False, **kw)
     assert par.sub_answers == seq.sub_answers
