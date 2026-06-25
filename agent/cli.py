@@ -413,13 +413,37 @@ def council(
         console.success(f"wrote run capsule to {capsule_out}")
 
 
+@app.command(name="deep-research")
+def deep_research_cmd(
+    question: str = typer.Argument(..., help="a big, multi-part question to research deeply"),
+    max_subs: int = typer.Option(5, help="max sub-questions to decompose into"),
+    provider: str | None = typer.Option(None),
+    model: str | None = typer.Option(None),
+    report: str | None = typer.Option(None, help="write the full markdown report to this path"),
+):
+    """plan -> answer each sub-question via the council -> cross-check -> report. (needs a key)"""
+    from agent.deepresearch import deep_research
+
+    settings = _settings(provider, model, None, False, None)
+    console.info("planning and researching... this fans out across sub-questions.")
+    res = deep_research(question, settings=settings, max_subs=max_subs)
+    console.markdown(res.to_markdown()) if console.console() else print(res.to_markdown())
+    if res.contradictions:
+        console.error(f"heads up: {len(res.contradictions)} contradiction(s) across sub-answers")
+    if report:
+        from pathlib import Path
+
+        Path(report).write_text(res.to_markdown(), encoding="utf-8")
+        console.success(f"wrote report to {report}")
+
+
 @app.command()
 def route(query: str = typer.Argument(..., help="the query to classify")):
     """show which mode the router would pick for a query (offline, instant)."""
     from agent.router import route as _route
 
     r = _route(query)
-    console.info(f"mode: {r.mode}  ({r.reason})")
+    console.info(f"mode: {r.mode}  (confidence {r.confidence:.2f}, runner-up {r.runner_up})")
 
 
 @app.command(name="score")
