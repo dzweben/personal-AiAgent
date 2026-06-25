@@ -417,16 +417,52 @@ def council(
 def deep_research_cmd(
     question: str = typer.Argument(..., help="a big, multi-part question to research deeply"),
     max_subs: int = typer.Option(5, help="max sub-questions to decompose into"),
+    grounded: bool = typer.Option(False, help="read live web sources and cite them"),
+    verify: bool = typer.Option(False, help="fact-check the final answer against sources"),
+    remember: bool = typer.Option(False, help="recall + store experience so it compounds"),
+    no_parallel: bool = typer.Option(False, "--no-parallel", help="answer sub-questions serially"),
     provider: str | None = typer.Option(None),
     model: str | None = typer.Option(None),
     report: str | None = typer.Option(None, help="write the full markdown report to this path"),
 ):
-    """plan -> answer each sub-question via the council -> cross-check -> report. (needs a key)"""
+    """plan -> answer each sub-question -> cross-check -> report. (needs a key)
+
+    add --grounded to read the live web and cite sources, --verify to fact-check the result
+    against those sources, and --remember to let runs compound over time.
+    """
     from agent.deepresearch import deep_research
+    from agent.llm import complete as _complete
 
     settings = _settings(provider, model, None, False, None)
+
+    retrieve = verify_fn = experience = None
+    complete = (
+        (lambda p, **kw: _complete(p, settings=settings, **kw)) if (grounded or remember) else None
+    )
+    if grounded:
+        from agent.grounding import default_retriever
+
+        retrieve = default_retriever()
+    if verify:
+        from agent.factcheck import grounded_verifier
+
+        verify_fn = grounded_verifier(retrieve or _safe_default_retriever(), settings=settings)
+    if remember:
+        from agent.experience import Experience
+
+        experience = Experience()
+
     console.info("planning and researching... this fans out across sub-questions.")
-    res = deep_research(question, settings=settings, max_subs=max_subs)
+    res = deep_research(
+        question,
+        settings=settings,
+        max_subs=max_subs,
+        complete=complete,
+        retrieve=retrieve,
+        verify=verify_fn,
+        experience=experience,
+        parallel=not no_parallel,
+    )
     console.markdown(res.to_markdown()) if console.console() else print(res.to_markdown())
     if res.contradictions:
         console.error(f"heads up: {len(res.contradictions)} contradiction(s) across sub-answers")
@@ -435,6 +471,12 @@ def deep_research_cmd(
 
         Path(report).write_text(res.to_markdown(), encoding="utf-8")
         console.success(f"wrote report to {report}")
+
+
+def _safe_default_retriever():
+    from agent.grounding import default_retriever
+
+    return default_retriever()
 
 
 @app.command()
