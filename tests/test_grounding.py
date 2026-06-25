@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent.grounding import Passage, as_context, html_to_text, retrieve
+from agent.grounding import Passage, as_context, grounded_answer, html_to_text, retrieve
 
 _PAGES = {
     "https://good.com": "<html><script>junk()</script><p>Caffeine blocks adenosine and delays sleep onset in adults.</p></html>",
@@ -53,3 +53,25 @@ def test_as_context_includes_citations():
 
 def test_as_context_empty():
     assert "no sources" in as_context([])
+
+
+def test_grounded_answer_cites_sources():
+    retrieve = lambda q: [
+        Passage("Caffeine blocks adenosine.", "https://nih.gov/x", 1.0)
+    ]  # noqa: E731
+    answer = grounded_answer(retrieve, complete=lambda p: "Caffeine delays sleep.")
+    out = answer("how does caffeine affect sleep?")
+    assert "nih.gov" in out
+
+
+def test_grounded_answer_passes_context_to_model():
+    seen = {}
+
+    def complete(prompt):
+        seen["prompt"] = prompt
+        return "answer with http://nih.gov/x already cited"
+
+    retrieve = lambda q: [Passage("important fact here", "http://nih.gov/x", 1.0)]  # noqa: E731
+    grounded_answer(retrieve, complete=complete)("q")
+    assert "important fact here" in seen["prompt"]
+    assert "ONLY the sources" in seen["prompt"]
