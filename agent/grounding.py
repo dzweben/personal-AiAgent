@@ -108,6 +108,31 @@ def as_context(passages: list[Passage]) -> str:
     return "\n\n".join(lines)
 
 
+def grounded_answer(retrieve_fn, complete, settings=None):
+    """build an answer(question) that reads real sources first, then answers citing them.
+
+    this is the function the deep-research pipeline plugs in when you want grounded, cited
+    answers instead of model-memory ones. `retrieve_fn(question) -> [Passage]` and
+    `complete(prompt) -> str` are both injectable, so it tests offline.
+    """
+
+    def answer(question: str) -> str:
+        passages = retrieve_fn(question)
+        context = as_context(passages)
+        urls = " ".join(dict.fromkeys(p.url for p in passages))  # unique, order-preserved
+        prompt = (
+            f"Use ONLY the sources below to answer. Cite the urls you used.\n\n"
+            f"Sources:\n{context}\n\nQuestion: {question}"
+        )
+        body = complete(prompt)
+        # make sure the source urls are present so downstream source-extraction can see them
+        if urls and "http" not in body:
+            body = f"{body}\n\nSources: {urls}"
+        return body
+
+    return answer
+
+
 def default_retriever(k_pages: int = 3, k_passages: int = 5):
     """build a retrieve() bound to the project's real search + fetch tools (needs network)."""
     from agent.tools.web import _fetch_readable
