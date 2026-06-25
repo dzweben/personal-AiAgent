@@ -32,7 +32,8 @@ _STOP_ENTITIES = {
 _REL_RE = re.compile(
     r"\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+"
     r"(is|are|was|were|has|have|causes?|affects?|contains?|powers?|owns?|created?|uses?|"
-    r"produces?|requires?|enables?|includes?)\s+"
+    r"produces?|requires?|enables?|includes?|blocks?|delays?|reduces?|raises?|lowers?|"
+    r"improves?|prevents?|increases?|decreases?|leads?|drives?|triggers?)\s+"
     r"(?:(?:a|an|the)\s+)?([a-zA-Z][a-zA-Z]+(?:\s+[a-zA-Z]+){0,2})"
 )
 
