@@ -6,6 +6,21 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+- a **deep-research brain** built on top of the council (`aiagent deep-research`): an autonomous
+  pipeline that plans a question into a sub-question DAG, answers each (dependencies first),
+  synthesises an overall answer, then cross-checks it — building a knowledge graph, flagging
+  contradictions, and ranking sources — before scoring confidence and writing a markdown report.
+  The reasoning primitives it chains, each its own offline-testable module:
+  - `planner` — decompose a question into a sub-question DAG
+  - `dag` — a dependency-aware task-graph executor with cycle detection
+  - `sources` — extract, dedupe, and rank citations by domain authority
+  - `consistency` — self-consistency sampling with answer clustering
+  - `contradiction` — find conflicting claims across answers
+  - `knowledge` — build a queryable entity/relation graph from answers
+  - `argmap` — structure a debate into support/attack edges
+  - `reflect` — a lessons memory that learns across runs
+
 ### Changed
 - a big hardening pass over every reasoning idea, each taken closer to its max:
   - **council** now *self-corrects in a loop* (`--target`/`--max-iter`), feeding red-team

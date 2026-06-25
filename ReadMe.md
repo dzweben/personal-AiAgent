@@ -186,6 +186,24 @@ building blocks — all offline-testable via injectable callables:
 aiagent council "should we migrate to kubernetes?" --show-run
 ```
 
+## Deep research (the autonomous brain)
+
+`aiagent deep-research "<big question>"` is the capability capstone. It plans the question into
+a sub-question DAG, answers each one (dependencies first, via the council), synthesises an
+overall answer, then **cross-checks itself**: it builds a knowledge graph from the answers,
+flags contradictions between sub-answers, ranks the sources by domain authority, scores a
+confidence, and writes a full markdown report.
+
+```bash
+aiagent deep-research "How does caffeine affect sleep, what's a safe dose, and should I quit?" \
+  --report caffeine.md
+```
+
+The primitives it chains are each their own small, offline-testable module: `planner` (DAG
+decomposition), `dag` (topological executor with cycle detection), `sources`, `consistency`
+(self-consistency sampling), `contradiction`, `knowledge` (entity/relation graph), `argmap`,
+and `reflect` (a lessons memory that learns across runs).
+
 ## The chaos cabinet
 
 A drawer of deliberately over-the-top experiments. Each is its own small module with an
@@ -290,6 +308,15 @@ personal-aiagent/
 │   ├── summarize.py        # map-reduce summariser
 │   ├── budget.py           # cost ceiling guard
 │   ├── replay.py           # run recorder (capsule-packable)
+│   ├── deepresearch.py     # autonomous capstone: plan → execute → cross-check → report
+│   ├── planner.py          # decompose a question into a sub-question DAG
+│   ├── dag.py              # dependency-aware task-graph executor
+│   ├── sources.py          # citation extraction, dedup, authority ranking
+│   ├── consistency.py      # self-consistency sampling + clustering
+│   ├── contradiction.py    # find conflicting claims across answers
+│   ├── knowledge.py        # entity/relation graph with path queries
+│   ├── argmap.py           # structure a debate into support/attack edges
+│   ├── reflect.py          # lessons memory that learns across runs
 │   ├── console.py          # rich pretty printing
 │   ├── cli.py              # the typer cli
 │   ├── tools/              # the tool belt, one module per tool
