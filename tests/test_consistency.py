@@ -31,8 +31,14 @@ def test_consistency_score_reflects_agreement():
     # all identical -> consistency 1.0
     same = self_consistency("q", sample=lambda q, i: "identical answer here", n=4)
     assert same.consistency == 1.0
-    # all different -> low consistency
-    diff = self_consistency("q", sample=lambda q, i: f"totally unique answer number {i} zzz{i}", n=4)
+    # all different -> low consistency (genuinely disjoint vocab per sample)
+    pools = [
+        "alpha bravo charlie delta",
+        "echo foxtrot golf hotel",
+        "india juliet kilo lima",
+        "mike november oscar papa",
+    ]
+    diff = self_consistency("q", sample=lambda q, i: pools[i], n=4)
     assert diff.consistency < 0.5
     assert not diff.agreed
 
