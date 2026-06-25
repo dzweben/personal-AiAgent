@@ -86,7 +86,7 @@ def retrieve(
 
     pages = map_parallel(fetch, urls, workers=workers)
     passages: list[Passage] = []
-    for url, raw in zip(urls, pages):
+    for url, raw in zip(urls, pages, strict=False):
         if not raw:
             continue
         text = html_to_text(raw)
