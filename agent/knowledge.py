@@ -33,7 +33,7 @@ _REL_RE = re.compile(
     r"\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+"
     r"(is|are|was|were|has|have|causes?|affects?|contains?|powers?|owns?|created?|uses?|"
     r"produces?|requires?|enables?|includes?)\s+"
-    r"(?:a|an|the\s+)?([a-zA-Z][a-zA-Z]+(?:\s+[a-zA-Z]+){0,2})"
+    r"(?:(?:a|an|the)\s+)?([a-zA-Z][a-zA-Z]+(?:\s+[a-zA-Z]+){0,2})"
 )
 
 
@@ -98,7 +98,12 @@ def extract_entities(text: str) -> list[str]:
     """return distinct entity-ish names mentioned in text (order preserved)."""
     out, seen = [], set()
     for m in _ENTITY_RE.findall(text):
-        if m in _STOP_ENTITIES or m.lower() in seen:
+        # a sentence-initial stopword can glue onto a real entity ("The NASA") -- peel it off
+        words = m.split()
+        while words and words[0] in _STOP_ENTITIES:
+            words = words[1:]
+        m = " ".join(words)
+        if not m or m in _STOP_ENTITIES or m.lower() in seen:
             continue
         seen.add(m.lower())
         out.append(m)
