@@ -196,8 +196,12 @@ confidence, and writes a full markdown report.
 
 ```bash
 aiagent deep-research "How does caffeine affect sleep, what's a safe dose, and should I quit?" \
-  --report caffeine.md
+  --grounded --verify --remember --report caffeine.md
 ```
+
+`--grounded` reads the **live web** and cites real urls, `--verify` fact-checks the answer
+against those sources (not the model's memory), `--remember` makes runs **compound** over time,
+and independent sub-questions are answered **in parallel** by default.
 
 The primitives it chains are each their own small, offline-testable module: `planner` (DAG
 decomposition), `dag` (topological executor with cycle detection), `sources`, `consistency`
@@ -309,6 +313,10 @@ personal-aiagent/
 │   ├── budget.py           # cost ceiling guard
 │   ├── replay.py           # run recorder (capsule-packable)
 │   ├── deepresearch.py     # autonomous capstone: plan → execute → cross-check → report
+│   ├── grounding.py        # live web: search → fetch → extract → cite real sources
+│   ├── parallel.py         # order-preserving concurrent map (fan-out speed)
+│   ├── semantic_memory.py  # embeddings + meaning-based recall across sessions
+│   ├── experience.py       # lessons + memory that compound run over run
 │   ├── planner.py          # decompose a question into a sub-question DAG
 │   ├── dag.py              # dependency-aware task-graph executor
 │   ├── sources.py          # citation extraction, dedup, authority ranking

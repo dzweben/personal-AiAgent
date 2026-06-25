@@ -7,6 +7,16 @@ semantic versioning.
 ## [Unreleased]
 
 ### Added
+- **grounding in reality** — the deep-research brain can now actually go read the web and
+  back its answers with real sources, and it runs far faster and learns over time:
+  - `grounding` — search → fetch pages (in parallel) → extract → rank passages → cite urls;
+    `grounded_answer` makes the agent answer strictly from retrieved sources
+  - `parallel` + parallel DAG execution — independent sub-questions are answered concurrently
+    (a 4-way fan-out drops from ~4 units of wait to ~1)
+  - `semantic_memory` — dependency-free embeddings with persistent, meaning-based recall
+  - `experience` — lessons + semantic memory compound across runs, recalled into new prompts
+  - grounded `factcheck` — verify claims against *retrieved sources*, not the model's memory
+  - `deep-research` gained `--grounded`, `--verify`, `--remember`, and `--no-parallel`
 - a **deep-research brain** built on top of the council (`aiagent deep-research`): an autonomous
   pipeline that plans a question into a sub-question DAG, answers each (dependencies first),
   synthesises an overall answer, then cross-checks it — building a knowledge graph, flagging
