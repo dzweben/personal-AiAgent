@@ -34,6 +34,7 @@ class DeepResult:
     contradictions: list = field(default_factory=list)
     sources: list = field(default_factory=list)
     graph: KnowledgeGraph | None = None
+    claims: list = field(default_factory=list)
 
     @property
     def confidence(self) -> float:
@@ -85,10 +86,36 @@ def deep_research(
     complete=None,
     settings=None,
     max_subs: int = 5,
+    retrieve=None,
+    parallel: bool = True,
+    workers: int = 4,
+    experience=None,
+    verify=None,
 ) -> DeepResult:
-    """run the full deep-research pipeline and return a cross-checked, scored result."""
+    """run the full deep-research pipeline and return a cross-checked, scored result.
+
+    the capability knobs:
+      - retrieve: a grounding retriever -> sub-answers read real sources and cite them
+      - parallel: answer independent sub-questions concurrently (on by default)
+      - experience: an Experience store -> recall relevant past work, remember this run
+      - verify: a claim verifier (e.g. grounded) -> fact-check the final answer
+    """
+    # compounding memory: let prior runs inform this one
+    if experience is not None:
+        prior = experience.recall_context(question)
+        if prior and complete is not None:
+            base_complete = complete
+
+            def complete(prompt, **kw):  # noqa: A001 - wrap to inject recalled context
+                return base_complete(f"{prior}\n\n{prompt}", **kw)
+
     if answer is None:
-        answer = _default_answer(complete, settings)
+        if retrieve is not None and complete is not None:
+            from agent.grounding import grounded_answer
+
+            answer = grounded_answer(retrieve, complete, settings=settings)
+        else:
+            answer = _default_answer(complete, settings)
     if synthesize is None:
         if complete is not None:
 
@@ -115,7 +142,7 @@ def deep_research(
         )
     )
 
-    dag_result = run_dag(nodes)
+    dag_result = run_dag(nodes, parallel=parallel, workers=workers)
     sub_answers = {subqs[int(k[1:])]: v for k, v in dag_result.results.items() if k != "synthesis"}
     final = dag_result.results.get("synthesis", " ".join(sub_answers.values()))
 
@@ -127,7 +154,14 @@ def deep_research(
     contradictions = find_contradictions(list(sub_answers.values()))
     sources = extract_sources(" ".join(all_text))
 
-    return DeepResult(
+    # optionally verify the final answer's claims against sources
+    claims = []
+    if verify is not None:
+        from agent.factcheck import factcheck
+
+        claims = factcheck(final, verify=verify)
+
+    result = DeepResult(
         question=question,
         plan=plan,
         sub_answers=sub_answers,
@@ -135,4 +169,10 @@ def deep_research(
         contradictions=contradictions,
         sources=sources,
         graph=graph,
+        claims=claims,
     )
+
+    # remember this run so future questions benefit
+    if experience is not None:
+        experience.remember(question, final)
+    return result
