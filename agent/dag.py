@@ -59,22 +59,46 @@ def topological_order(nodes: list[Node]) -> list[str]:
     return order
 
 
-def run_dag(nodes: list[Node], *, on_error: str = "skip") -> DAGResult:
+def layers(nodes: list[Node]) -> list[list[str]]:
+    """group node keys into dependency layers: every node in a layer can run concurrently."""
+    by_key = {n.key: n for n in nodes}
+    topological_order(nodes)  # validates (cycles / unknown deps) before we layer
+    depth: dict[str, int] = {}
+
+    def node_depth(key: str) -> int:
+        if key in depth:
+            return depth[key]
+        deps = by_key[key].deps
+        depth[key] = 0 if not deps else 1 + max(node_depth(d) for d in deps)
+        return depth[key]
+
+    out: list[list[str]] = []
+    for n in nodes:
+        d = node_depth(n.key)
+        while len(out) <= d:
+            out.append([])
+        out[d].append(n.key)
+    return out
+
+
+def run_dag(
+    nodes: list[Node], *, on_error: str = "skip", parallel: bool = False, workers: int = 8
+) -> DAGResult:
     """execute the graph in dependency order, feeding each node its dependencies' results.
 
     on_error="skip" records a node's failure (and skips anything that needed it); on_error="raise"
     propagates the exception. a node downstream of a failed/ skipped dependency is itself skipped.
+    with parallel=True, independent nodes in the same dependency layer run concurrently.
     """
-    order = topological_order(nodes)
     by_key = {n.key: n for n in nodes}
-    res = DAGResult(order=order)
+    res = DAGResult(order=topological_order(nodes))
 
-    for key in order:
+    def run_one(key: str):
         node = by_key[key]
         missing = [d for d in node.deps if d not in res.results]
         if missing:
             res.failed[key] = f"skipped: upstream {missing} unavailable"
-            continue
+            return
         dep_results = {d: res.results[d] for d in node.deps}
         try:
             res.results[key] = node.run(dep_results)
@@ -82,4 +106,15 @@ def run_dag(nodes: list[Node], *, on_error: str = "skip") -> DAGResult:
             if on_error == "raise":
                 raise
             res.failed[key] = f"error: {exc}"
+
+    if not parallel:
+        for key in res.order:
+            run_one(key)
+        return res
+
+    from agent.parallel import map_parallel
+
+    for layer in layers(nodes):
+        # within a layer there are no inter-dependencies, so it's safe to run them at once
+        map_parallel(run_one, layer, workers=workers, on_error=on_error)
     return res
