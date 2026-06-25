@@ -78,6 +78,52 @@ def _default_verifier(settings=None):
     return verify
 
 
+_NEG_RE = re.compile(r"\b(?:not|no|never|cannot|can't|isn't|aren't|doesn't|don't|false)\b")
+
+
+def grounded_verifier(retrieve_fn, complete=None, settings=None):
+    """verify claims against *retrieved sources* instead of the model's memory.
+
+    for each claim it pulls passages via `retrieve_fn(claim)`. with a `complete`, it asks the
+    model to judge the claim strictly from those passages (and cite). without one, it falls back
+    to a heuristic: enough shared terms with a passage and matching polarity -> supported, a
+    polarity clash -> refuted, nothing relevant -> unclear. `retrieve_fn` is injectable, so this
+    tests offline.
+    """
+
+    def verify(claim: str):
+        passages = retrieve_fn(claim)
+        if not passages:
+            return "unclear", "no sources found for this claim"
+        context = "\n".join(f"- ({p.url}) {p.text}" for p in passages)
+
+        if complete is not None:
+            out = complete(
+                f"Claim: {claim}\n\nSources:\n{context}\n\nUsing ONLY these sources, is the claim "
+                "supported, refuted, or unclear? Reply with one of those words, then cite the url."
+            )
+            first = out.strip().split()[0].lower().strip(".,:") if out.strip() else "unclear"
+            return (first if first in VERDICTS else "unclear"), out.strip()
+
+        # heuristic NLI: term overlap + polarity agreement against the best-matching passage
+        claim_terms = set(re.findall(r"\w+", claim.lower()))
+        claim_neg = bool(_NEG_RE.search(claim.lower()))
+        best, best_overlap = None, 0.0
+        for p in passages:
+            pt = set(re.findall(r"\w+", p.text.lower()))
+            overlap = len(claim_terms & pt) / len(claim_terms) if claim_terms else 0.0
+            if overlap > best_overlap:
+                best, best_overlap = p, overlap
+        if best is None or best_overlap < 0.4:
+            return "unclear", "sources don't clearly address the claim"
+        passage_neg = bool(_NEG_RE.search(best.text.lower()))
+        if claim_neg == passage_neg:
+            return "supported", f"matches {best.url}"
+        return "refuted", f"contradicted by {best.url}"
+
+    return verify
+
+
 def factcheck(text: str, verify=None, settings=None) -> list[ClaimCheck]:
     """extract claims and verify each. `verify(claim) -> (verdict, note)` is injectable."""
     verify = verify or _default_verifier(settings)
