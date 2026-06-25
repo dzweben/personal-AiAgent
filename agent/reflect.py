@@ -98,4 +98,4 @@ def reflect(question: str, answer: str, extract=None, settings=None) -> list[str
             )
             return [ln.strip("-* ").strip() for ln in out.splitlines() if ln.strip()]
 
-    return [lesson for lesson in extract(question, answer) if lesson][:3]
+    return [lesson.strip() for lesson in extract(question, answer) if lesson.strip()][:3]
