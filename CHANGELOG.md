@@ -7,6 +7,21 @@ semantic versioning.
 ## [Unreleased]
 
 ### Added
+- a **scholarly research-writing arm** (`agent/scholar/`, `aiagent write-review` /
+  `aiagent scholar-search`) that writes from real academic literature, not the model's memory.
+  It searches open scholarly indexes (OpenAlex, Semantic Scholar, Crossref, Europe PMC, arXiv),
+  keeps only **empirical studies and reviews**, grades each by evidence strength, synthesises the
+  body by theme, and drafts a fully-cited document with a real reference list. Pieces:
+  - `paper` — one normalised record every index maps onto, with dedup + citation labels
+  - `sources` — connectors to five open indexes (injectable fetch; offline-testable)
+  - `classify` — empirical vs review, study-design detection, sample-size extraction
+  - `quality` — GRADE-style evidence scoring (design × sample × recency × citations)
+  - `citations` — APA / MLA / Chicago / Vancouver / BibTeX, in-text + reference lists
+  - `corpus` — a persistent, semantically-searchable paper library
+  - `synthesis` — themes, consensus vs contradiction, timeline, research gaps
+  - `writing` — outlines + grounded section drafting that can't invent references
+  - `arm` — the `ResearchWriter` capstone: topic → graded, themed, cited review
+  - no new dependencies (it reuses the existing httpx + semantic memory)
 - **grounding in reality** — the deep-research brain can now actually go read the web and
   back its answers with real sources, and it runs far faster and learns over time:
   - `grounding` — search → fetch pages (in parallel) → extract → rank passages → cite urls;

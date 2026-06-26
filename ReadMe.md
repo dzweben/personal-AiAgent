@@ -186,6 +186,24 @@ building blocks — all offline-testable via injectable callables:
 aiagent council "should we migrate to kubernetes?" --show-run
 ```
 
+## The scholarly research-writing arm
+
+A specialised arm for writing actual research, grounded **only in real academic literature**.
+`aiagent write-review "<topic>"` searches open scholarly indexes (OpenAlex, Semantic Scholar,
+Crossref, Europe PMC, arXiv), keeps **only empirical studies and literature reviews**, grades
+each paper by evidence strength, synthesises the body by theme, and drafts a fully-cited
+document with a real reference list — so every `(Author, Year)` traces back to a paper it
+actually retrieved, not a hallucination.
+
+```bash
+aiagent scholar-search "caffeine and sleep quality"     # ranked, evidence-graded reading list
+aiagent write-review "caffeine and sleep" --style apa --out review.md
+```
+
+> Note: Google Scholar has no open API and forbids scraping, so the arm uses the open indexes
+> that cover the same literature — same papers, legitimately accessible. Citation styles: APA,
+> MLA, Chicago, Vancouver, BibTeX. It adds **no new dependencies**.
+
 ## Deep research (the autonomous brain)
 
 `aiagent deep-research "<big question>"` is the capability capstone. It plans the question into
