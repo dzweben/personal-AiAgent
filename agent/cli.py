@@ -479,6 +479,63 @@ def _safe_default_retriever():
     return default_retriever()
 
 
+@app.command(name="scholar-search")
+def scholar_search(
+    topic: str = typer.Argument(..., help="what to search the scholarly literature for"),
+    limit: int = typer.Option(10, help="papers per index"),
+    indexes: str = typer.Option("openalex,semantic_scholar", help="comma-separated indexes"),
+    scholarly_only: bool = typer.Option(True, help="keep only empirical studies + reviews"),
+):
+    """search open scholarly indexes (OpenAlex, Semantic Scholar, ...) and grade what comes back."""
+    from agent.scholar.classify import keep_scholarly
+    from agent.scholar.quality import rank_by_quality
+    from agent.scholar.sources import search_papers
+
+    papers = search_papers(topic, indexes=[i.strip() for i in indexes.split(",")], limit=limit)
+    if scholarly_only:
+        papers = keep_scholarly(papers)
+    if not papers:
+        console.info("no papers found (or network blocked).")
+        return
+    for p, g in rank_by_quality(papers):
+        console.info(f"[{g.label:8}] {p.short_ref()} — {p.title}")
+
+
+@app.command(name="write-review")
+def write_review_cmd(
+    topic: str = typer.Argument(..., help="the topic to write a literature review on"),
+    kind: str = typer.Option("review", help="review | empirical | proposal"),
+    style: str = typer.Option(
+        "apa", help="citation style: apa | mla | chicago | vancouver | bibtex"
+    ),
+    max_papers: int = typer.Option(20, help="how many papers to gather"),
+    provider: str | None = typer.Option(None),
+    model: str | None = typer.Option(None),
+    out: str | None = typer.Option(None, help="write the document to this markdown path"),
+):
+    """research-writing arm: gather real papers and write a grounded, cited review. (needs a key)"""
+    from agent.llm import complete as _complete
+    from agent.scholar.arm import write_review
+
+    settings = _settings(provider, model, None, False, None)
+    console.info(f"gathering literature on '{topic}' and writing a {kind}...")
+    res = write_review(
+        topic,
+        complete=lambda p, **kw: _complete(p, settings=settings, **kw),
+        kind=kind,
+        style=style,
+        max_papers=max_papers,
+    )
+    md = res.to_markdown()
+    console.markdown(md) if console.console() else print(md)
+    console.success(f"synthesised {res.n_papers} papers; literature looks {res.agreement}")
+    if out:
+        from pathlib import Path
+
+        Path(out).write_text(md, encoding="utf-8")
+        console.success(f"wrote review to {out}")
+
+
 @app.command()
 def route(query: str = typer.Argument(..., help="the query to classify")):
     """show which mode the router would pick for a query (offline, instant)."""
