@@ -43,7 +43,7 @@ def themes(papers: list[Paper], threshold: float = 0.25) -> list[Theme]:
     texts = [f"{p.title}. {p.abstract}" for p in papers]
     clusters = cluster(texts, threshold=threshold)
     # map each clustered text back to its paper
-    by_text = {t: p for t, p in zip(texts, papers, strict=False)}
+    by_text = dict(zip(texts, papers, strict=False))
     out = []
     for group in clusters:
         members = [by_text[t] for t in group if t in by_text]
