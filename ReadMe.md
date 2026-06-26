@@ -204,6 +204,21 @@ aiagent write-review "caffeine and sleep" --style apa --out review.md
 > that cover the same literature — same papers, legitimately accessible. Citation styles: APA,
 > MLA, Chicago, Vancouver, BibTeX. It adds **no new dependencies**.
 
+### Writing *in* APA style (not just APA citations)
+
+The point isn't the reference list — it's the prose. The arm ships an **APA 7th-edition writing
+engine** (`agent/scholar/apa.py`) that encodes APA's actual writing standards from the
+Publication Manual (ch. 4–5): continuity and flow, conciseness, clarity, verb-tense logic,
+active voice, first person, **bias-free language**, and hedging of claims. Every section is
+drafted under that style prompt and then **self-corrected** — mechanical fixes first (wordiness,
+biased/dated terms like "the elderly" → "older adults", "subjects" → "participants"), then a
+model rewrite for tense/voice/overclaiming. You can lint any text directly:
+
+```bash
+aiagent apa-check "The study proves the elderly subjects didn't improve." --fix
+# → flags: overclaiming ("proves"), bias ("the elderly", "subjects"), contraction ("didn't")
+```
+
 ## Deep research (the autonomous brain)
 
 `aiagent deep-research "<big question>"` is the capability capstone. It plans the question into

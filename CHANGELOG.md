@@ -7,6 +7,13 @@ semantic versioning.
 ## [Unreleased]
 
 ### Added
+- an **APA 7th-edition writing-style engine** (`agent/scholar/apa.py`, `aiagent apa-check`) — the
+  point of the writing arm. It encodes APA's actual *writing standards* (Publication Manual ch.
+  4–5), not just citation format: continuity and flow, conciseness, clarity, verb-tense logic,
+  active voice, first person, **bias-free language** across the dimensions APA names, hedging
+  claims, and number rules. The writer drafts under this style prompt, then **self-corrects** in
+  two stages — unambiguous mechanical fixes (wordiness, biased/dated terms) followed by a model
+  rewrite for the rest — and reports an APA-compliance score on the finished review.
 - a **scholarly research-writing arm** (`agent/scholar/`, `aiagent write-review` /
   `aiagent scholar-search`) that writes from real academic literature, not the model's memory.
   It searches open scholarly indexes (OpenAlex, Semantic Scholar, Crossref, Europe PMC, arXiv),
