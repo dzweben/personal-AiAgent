@@ -105,7 +105,8 @@ _OVERCLAIM_RE = re.compile(
     r"\b(prove[sd]?|proven|proof that|definitely causes?|always|never)\b", re.IGNORECASE
 )
 _ANTHRO_RE = re.compile(
-    r"\b(the (?:study|paper|research|data|table|figure)) (believe|think|thinks|wants?|feels?|knows?)\b",
+    r"\b(the (?:study|paper|research|data|table|figure)) "
+    r"(believe[sd]?|thinks?|thought|wants?|wanted|feels?|felt|knows?|knew|hopes?)\b",
     re.IGNORECASE,
 )
 # a standalone digit 1-9 used as a quantity ("3 studies") should be spelled out in APA
