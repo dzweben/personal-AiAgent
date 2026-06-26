@@ -107,15 +107,18 @@ def draft_section(
         system=sys,
     ).strip()
 
-    apa_violations = []
     if style == "apa" and enforce_apa:
-        from agent.scholar.apa import check_apa
+        from agent.scholar.apa import check_apa, suggest_revisions
 
-        apa_violations = check_apa(body)
-        if apa_violations:
-            issues = "; ".join(f"{v.snippet} ({v.suggestion})" for v in apa_violations[:10])
+        # stage 1: apply the unambiguous mechanical fixes (wordiness, biased terms, spacing)
+        body = suggest_revisions(body)
+        # stage 2: anything left (tense, voice, flow, overclaiming) goes back to the model once
+        remaining = check_apa(body)
+        if remaining:
+            issues = "; ".join(f"{v.snippet} ({v.suggestion})" for v in remaining[:10])
             body = complete(
-                f"Rewrite the passage below to fix these APA style issues: {issues}\n\n{body}",
+                f"Rewrite the passage below to fix these APA style issues, preserving every "
+                f"citation: {issues}\n\n{body}",
                 settings=settings,
                 system=sys,
             ).strip()
