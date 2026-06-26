@@ -6,14 +6,24 @@ from agent.scholar.corpus import Corpus
 from agent.scholar.paper import Paper
 
 _PAPERS = [
-    Paper(title="Caffeine and sleep quality", abstract="caffeine delays sleep onset in adults", doi="10.1/a"),
-    Paper(title="Exercise and heart health", abstract="running improves cardiovascular outcomes", doi="10.2/b"),
+    Paper(
+        title="Caffeine and sleep quality",
+        abstract="caffeine delays sleep onset in adults",
+        doi="10.1/a",
+    ),
+    Paper(
+        title="Exercise and heart health",
+        abstract="running improves cardiovascular outcomes",
+        doi="10.2/b",
+    ),
 ]
 
 
 def test_add_dedupes():
     c = Corpus()
-    added = c.add([*_PAPERS, Paper(title="Caffeine and sleep quality", abstract="dup", doi="10.1/a")])
+    added = c.add(
+        [*_PAPERS, Paper(title="Caffeine and sleep quality", abstract="dup", doi="10.1/a")]
+    )
     assert added == 2
     assert len(c) == 2
 

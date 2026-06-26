@@ -52,7 +52,9 @@ def test_crossref_parses_authors_and_year():
 
 
 def test_semantic_scholar_parses():
-    payload = {"data": [{"title": "T", "year": 2020, "authors": [{"name": "A B"}], "citationCount": 5}]}
+    payload = {
+        "data": [{"title": "T", "year": 2020, "authors": [{"name": "A B"}], "citationCount": 5}]
+    }
     p = parse_semantic_scholar(payload)[0]
     assert p.year == 2020 and p.citations == 5
 
@@ -61,7 +63,12 @@ def test_europepmc_parses():
     payload = {
         "resultList": {
             "result": [
-                {"title": "Trial.", "authorString": "Smith J", "pubYear": "2018", "isOpenAccess": "Y"}
+                {
+                    "title": "Trial.",
+                    "authorString": "Smith J",
+                    "pubYear": "2018",
+                    "isOpenAccess": "Y",
+                }
             ]
         }
     }
@@ -84,9 +91,11 @@ def test_search_merges_and_dedupes_across_indexes():
     papers = search_papers(
         "caffeine",
         indexes=["openalex", "semantic_scholar"],
-        fetch_json=lambda url: _OA
-        if "openalex" in url
-        else {"data": [{"title": "Caffeine and Sleep", "externalIds": {"DOI": "10.1/x"}}]},
+        fetch_json=lambda url: (
+            _OA
+            if "openalex" in url
+            else {"data": [{"title": "Caffeine and Sleep", "externalIds": {"DOI": "10.1/x"}}]}
+        ),
     )
     assert len(papers) == 1
 
