@@ -36,11 +36,22 @@ class ReviewResult:
     def n_papers(self) -> int:
         return len(self.papers)
 
+    @property
+    def apa_compliance(self) -> float:
+        """mean APA writing-style compliance across the drafted sections (1.0 = clean)."""
+        from agent.scholar.apa import apa_score
+
+        bodies = [s.body for s in self.document.sections if s.body]
+        if not bodies:
+            return 1.0
+        return round(sum(apa_score(b) for b in bodies) / len(bodies), 3)
+
     def to_markdown(self) -> str:
         """the document, plus an evidence-base appendix so the reader sees what it rests on."""
         lines = [self.document.to_markdown(), "\n## Evidence base\n"]
         lines.append(
             f"Synthesised {self.n_papers} papers; the literature looks **{self.agreement}**. "
+            f"APA style compliance: {self.apa_compliance:.0%}. "
             f"Active years: {', '.join(str(y) for y in self.timeline)}.\n"
         )
         for p, g in rank_by_quality(self.papers):
