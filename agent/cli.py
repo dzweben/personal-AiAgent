@@ -479,6 +479,29 @@ def _safe_default_retriever():
     return default_retriever()
 
 
+@app.command(name="apa-check")
+def apa_check_cmd(
+    text: str = typer.Argument(..., help="a passage to check, or a path to a text/markdown file"),
+    fix: bool = typer.Option(False, help="also print an auto-revised version (mechanical fixes)"),
+):
+    """lint a passage against APA 7th-edition writing rules (not just citation format)."""
+    from pathlib import Path
+
+    from agent.scholar.apa import apa_score, check_apa, suggest_revisions
+
+    body = Path(text).read_text(encoding="utf-8") if Path(text).exists() else text
+    violations = check_apa(body)
+    console.info(f"APA writing compliance: {apa_score(body):.0%}  ({len(violations)} issue(s))")
+    for v in violations:
+        console.info(f"  • [{v.rule}] {v.snippet!r} → {v.suggestion}")
+    if not violations:
+        console.success("clean — reads like APA.")
+    if fix:
+        console.info("")
+        console.success("auto-revised (mechanical fixes only):")
+        console.info(suggest_revisions(body))
+
+
 @app.command(name="scholar-search")
 def scholar_search(
     topic: str = typer.Argument(..., help="what to search the scholarly literature for"),
