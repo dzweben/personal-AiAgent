@@ -68,6 +68,21 @@ def _sources_block(papers: list[Paper], style: str = "apa") -> str:
     return "\n".join(lines)
 
 
+def _style_system(style: str, heading: str) -> str:
+    """the system prompt that governs writing voice. for APA, the full style engine drives it."""
+    if style == "apa":
+        from agent.scholar.apa import style_prompt
+
+        return style_prompt(heading) + (
+            "\n\nWrite the requested section using ONLY the provided sources, weaving in their "
+            "in-text citations exactly as given. Never invent a citation, fact, or paper."
+        )
+    return (
+        "You are an academic writer. Write the requested section using ONLY the provided sources. "
+        "Weave in their in-text citations exactly as given. Do not invent citations or facts."
+    )
+
+
 def draft_section(
     heading: str,
     topic: str,
@@ -75,21 +90,36 @@ def draft_section(
     complete,
     style: str = "apa",
     settings=None,
+    enforce_apa: bool = True,
 ) -> Section:
-    """draft one section grounded strictly in `papers`, citing them in-text."""
+    """draft one section grounded strictly in `papers`, in the requested writing style.
+
+    when style is 'apa' and enforce_apa is set, the draft is run through the APA style checker and,
+    if it has violations, sent back to the model once for an APA-compliant rewrite.
+    """
     if not papers:
         return Section(heading=heading, body="", cited=[])
     sources = _sources_block(papers, style)
-    sys = (
-        "You are an academic writer. Write the requested section using ONLY the provided sources. "
-        "Weave in their in-text citations exactly as given (e.g. (Smith et al., 2021)). Do not "
-        "invent citations, facts, or papers. Be precise and scholarly."
-    )
+    sys = _style_system(style, heading)
     body = complete(
         f"Topic: {topic}\nSection to write: {heading}\n\nSources you may cite:\n{sources}",
         settings=settings,
         system=sys,
     ).strip()
+
+    apa_violations = []
+    if style == "apa" and enforce_apa:
+        from agent.scholar.apa import check_apa
+
+        apa_violations = check_apa(body)
+        if apa_violations:
+            issues = "; ".join(f"{v.snippet} ({v.suggestion})" for v in apa_violations[:10])
+            body = complete(
+                f"Rewrite the passage below to fix these APA style issues: {issues}\n\n{body}",
+                settings=settings,
+                system=sys,
+            ).strip()
+
     cited = [p.short_ref() for p in papers if p.first_author_surname in body]
     return Section(heading=heading, body=body, cited=cited)
 
