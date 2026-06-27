@@ -66,8 +66,10 @@ def research(
 
         mem = ConversationMemory(path=settings.memory.path, max_history=settings.memory.max_history)
 
+    from agent.anim import thinking
+
     agent = build_agent(settings=settings, detailed=detailed, memory=mem, persona=persona)
-    with console.console().status("thinking...") if console.console() else _noop():
+    with thinking("digging up an answer"):
         result = agent.research(query)
 
     console.print_response(result)
@@ -370,32 +372,35 @@ def council(
     needs an api key. raise --target/--max-iter to turn on the self-correction loop, or pass
     --evolve to let a genetic search pick the persona line-up first.
     """
+    from agent.anim import thinking
+
     settings = _settings(provider, model, None, False, None)
     persona_list = [p.strip() for p in personas.split(",")]
 
     if evolve:
         from agent.council_evolve import convene_evolved
 
-        console.info("evolving the persona line-up against the scorecard...")
-        res, search = convene_evolved(
-            question,
-            settings=settings,
-            refine_rounds=rounds,
-            target_score=target,
-            max_iterations=max_iter,
-        )
+        with thinking("evolving the persona line-up"):
+            res, search = convene_evolved(
+                question,
+                settings=settings,
+                refine_rounds=rounds,
+                target_score=target,
+                max_iterations=max_iter,
+            )
         console.success(f"evolved line-up: {', '.join(search.personas)} (fit {search.fitness:.2f})")
     else:
         from agent.council import convene
 
-        res = convene(
-            question,
-            personas=persona_list,
-            refine_rounds=rounds,
-            target_score=target,
-            max_iterations=max_iter,
-            settings=settings,
-        )
+        with thinking("convening the council"):
+            res = convene(
+                question,
+                personas=persona_list,
+                refine_rounds=rounds,
+                target_score=target,
+                max_iterations=max_iter,
+                settings=settings,
+            )
 
     console.markdown(res.pretty()) if console.console() else print(res.pretty())
     if show_run:
@@ -452,17 +457,19 @@ def deep_research_cmd(
 
         experience = Experience()
 
-    console.info("planning and researching... this fans out across sub-questions.")
-    res = deep_research(
-        question,
-        settings=settings,
-        max_subs=max_subs,
-        complete=complete,
-        retrieve=retrieve,
-        verify=verify_fn,
-        experience=experience,
-        parallel=not no_parallel,
-    )
+    from agent.anim import thinking
+
+    with thinking("planning and researching across sub-questions"):
+        res = deep_research(
+            question,
+            settings=settings,
+            max_subs=max_subs,
+            complete=complete,
+            retrieve=retrieve,
+            verify=verify_fn,
+            experience=experience,
+            parallel=not no_parallel,
+        )
     console.markdown(res.to_markdown()) if console.console() else print(res.to_markdown())
     if res.contradictions:
         console.error(f"heads up: {len(res.contradictions)} contradiction(s) across sub-answers")
@@ -537,18 +544,19 @@ def write_review_cmd(
     out: str | None = typer.Option(None, help="write the document to this markdown path"),
 ):
     """research-writing arm: gather real papers and write a grounded, cited review. (needs a key)"""
+    from agent.anim import thinking
     from agent.llm import complete as _complete
     from agent.scholar.arm import write_review
 
     settings = _settings(provider, model, None, False, None)
-    console.info(f"gathering literature on '{topic}' and writing a {kind}...")
-    res = write_review(
-        topic,
-        complete=lambda p, **kw: _complete(p, settings=settings, **kw),
-        kind=kind,
-        style=style,
-        max_papers=max_papers,
-    )
+    with thinking(f"reading the literature and writing your {kind}"):
+        res = write_review(
+            topic,
+            complete=lambda p, **kw: _complete(p, settings=settings, **kw),
+            kind=kind,
+            style=style,
+            max_papers=max_papers,
+        )
     md = res.to_markdown()
     console.markdown(md) if console.console() else print(md)
     console.success(f"synthesised {res.n_papers} papers; literature looks {res.agreement}")
@@ -684,14 +692,6 @@ def version():
     from agent import __version__
 
     console.info(f"personal-aiagent {__version__}")
-
-
-class _noop:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *a):
-        return False
 
 
 def main():  # entry point used by `python -m agent.cli`
