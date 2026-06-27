@@ -1,88 +1,78 @@
 # AiAgent
 
-This started as a weekend thing — a tiny Python script that asks an LLM a question, lets it
-use a couple of tools, and prints a clean answer. I got bored and kept poking at it, and it
-kind of got out of hand. It's now a little research-assistant framework, but the original idea
-is the same: ask a question, it goes and uses real tools to answer it.
+[![CI](https://github.com/dzweben/personal-aiagent/actions/workflows/ci.yml/badge.svg)](https://github.com/dzweben/personal-aiagent/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Built with LangChain](https://img.shields.io/badge/built%20with-LangChain-1c3c3c.svg)](https://www.langchain.com/)
 
-The original tiny version still works exactly the same — `python main.py` and
-`from tools import search_tool` haven't changed. Everything else is layered on top and optional.
+A little research assistant I built for fun. You ask it a question, it goes off and uses real
+tools — web search, Wikipedia, arXiv, a calculator, a Python sandbox, and a bunch more — to dig
+up an answer and hand it back clean.
 
-## What it does
+It started as a tiny weekend script and I kept poking at it for no real reason, so now it's…
+a lot more than that. But the original `python main.py` still works exactly like it did on day one.
 
-- **Research agent** — give it a question, it uses tools (web search, Wikipedia, arXiv, a
-  calculator, a sandboxed Python REPL, file read/write, and ~20 more) and returns a structured,
-  cited answer. Works with OpenAI, Anthropic, Groq, Google, Mistral, Cohere, or a local model
-  via Ollama.
-- **A CLI** (`aiagent`) with subcommands for research, chat, listing tools, memory, exporting,
-  and a bunch of experiments.
-- **Memory, caching, RAG** — SQLite conversation memory, a small disk cache, and optional
-  retrieval over your own docs.
-- **The toolsmith** (`aiagent forge`) — the agent can write its own new tools at runtime, behind
-  an AST sandbox so generated code can't touch the filesystem or network.
-- **A scholarly writing arm** (`aiagent write-review`) — searches open academic indexes
-  (OpenAlex, Semantic Scholar, Crossref, Europe PMC, arXiv), keeps only empirical studies and
-  reviews, grades them by evidence strength, and writes a cited literature review *in APA style*
-  — with a real APA writing-rules engine behind it, not just APA citations.
-- A pile of more experimental stuff — a multi-step "council" that debates and fact-checks its
-  own answers, deep-research that plans and cross-checks itself, a writing-rules linter. Fun to
-  build, varying degrees of practical.
+## The fun stuff it can do
 
-Fair warning: it's deliberately over-engineered. That was the point.
+- Answer questions using ~20 tools, with whatever model you like (OpenAI, Anthropic, Groq,
+  Google, Mistral, Cohere, or a local one via Ollama).
+- A proper `aiagent` CLI — research, chat, memory, exporting, the works.
+- Remember conversations (SQLite), cache results, and do RAG over your own docs.
+- **Forge its own tools** at runtime (`aiagent forge`) — the agent writes a new tool as code,
+  behind a sandbox so it can't touch your files or network.
+- **Write literature reviews** (`aiagent write-review`) from real academic papers (OpenAlex,
+  Semantic Scholar, arXiv, etc.), in proper APA style — there's a whole APA writing-rules engine
+  behind it, not just APA citations.
 
-## Setup
+It's over-engineered on purpose. That was the whole point.
+
+## Get it running
 
 ```bash
 git clone https://github.com/dzweben/personal-aiagent.git
 cd personal-aiagent
 python3 -m venv venv && source venv/bin/activate
 pip install -e .
-
-cp .env.example .env   # then add your API key(s)
+cp .env.example .env   # drop in your API key(s)
 ```
 
-## Using it
+## Play with it
 
 ```bash
-# the classic way still works
-python main.py
+python main.py                                       # the original, still works
 
-# or the CLI
 aiagent research "the history of the espresso machine"
-aiagent chat                                  # interactive, remembers the conversation
-aiagent tools                                 # list everything it can use
+aiagent chat                                         # interactive, remembers the convo
+aiagent tools                                        # everything it can use
 aiagent forge --name fahrenheit --desc "C to F" --expr "float(x) * 9/5 + 32"
 aiagent write-review "caffeine and sleep" --style apa --out review.md
 ```
 
-Config resolves in this order (later wins): defaults → `config.yaml` → `AIAGENT_*` env vars →
-CLI flags. See `config.example.yaml`.
+Config goes: defaults → `config.yaml` → `AIAGENT_*` env vars → CLI flags (later wins).
 
-## Layout
+## Where things live
 
 ```
 main.py / tools.py     the original, still-working entry point
 agent/                 the actual package (config, llm, tools, memory, cli, ...)
 agent/scholar/         the academic writing arm (papers, citations, APA engine)
 agent/style/           the writing-rules engine
-tests/                 pytest suite (all offline — no API keys needed to run them)
+tests/                 pytest suite — all offline, no API keys needed to run it
 ```
 
-## Dev
+## Hacking on it
 
 ```bash
 pip install -e ".[dev]"
-pytest          # the whole suite
+pytest
 ruff check . && black .
 ```
 
-Tests never call a real model or hit the network — anything LLM-shaped takes an injectable
-function, so the suite is fast and free to run.
+The tests never call a real model or hit the network (anything LLM-ish takes a fake function),
+so they're fast and free to run.
 
-## A note on the LLM-writes-tools bit
+Heads up: `aiagent forge` runs code the model wrote. It's sandboxed, but it's still a toy —
+don't point it at sketchy input on a machine you care about.
 
-`aiagent forge` runs code the model generated. It's sandboxed (allowlisted imports only, no
-`os`/`sys`/`eval`/`open`/etc.), but it's still a toy — don't point it at untrusted input on a
-machine you care about.
-
-MIT licensed. Built mostly for fun.
+MIT licensed. Built for fun. 🤖
