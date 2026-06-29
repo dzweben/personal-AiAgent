@@ -22,11 +22,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "langchain>=0.2,<1.0",
+    "langchain>=0.2,<2.0",
     "langchain-community>=0.2,<1.0",
-    "langchain-openai>=0.1,<1.0",
-    "langchain-anthropic>=0.1,<1.0",
-    "langchain-core>=0.2,<1.0",
+    "langchain-openai>=0.1,<2.0",
+    "langchain-anthropic>=0.1,<2.0",
+    "langchain-core>=0.2,<2.0",
     "wikipedia",
     "python-dotenv",
     "pydantic>=2",
